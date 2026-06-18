@@ -3,6 +3,21 @@ import Modal from './design-system/components/modal/modal.js';
 
 let websocket = null;
 let helpModal = null;
+let helpModalInitialized = false;
+
+function closeUnexpectedOpenModals() {
+  const overlays = document.querySelectorAll('.modal-overlay.open');
+  if (overlays.length === 0) {
+    return;
+  }
+  overlays.forEach((overlay) => {
+    overlay.classList.remove('open');
+    overlay.setAttribute('aria-hidden', 'true');
+  });
+  document.body.style.overflow = '';
+  document.body.style.paddingRight = '';
+  console.warn('[help-modal] Closed unexpected open modal overlay on startup');
+}
 
 // Initialize WebSocket connection
 function initializeWebSocket() {
@@ -45,33 +60,54 @@ function initializeWebSocket() {
   }
 }
 
-// Load help content and initialize modal
-async function initializeHelpModal() {
+async function loadHelpContentNode() {
   try {
     const response = await fetch('./help-content.html');
-    const helpContent = await response.text();
-
-    helpModal = Modal.createHelpModal({
-      title: 'Help / User Guide',
-      content: helpContent
-    });
-
-    const helpButton = document.getElementById('btn-help');
-    if (helpButton) {
-      helpButton.addEventListener('click', () => {
-        helpModal.open();
-      });
+    if (!response.ok) {
+      throw new Error(`Failed to load help content (${response.status})`);
     }
+    const helpContent = await response.text();
+    const template = document.createElement('template');
+    template.innerHTML = helpContent;
+    return template.content.cloneNode(true);
   } catch (error) {
     console.error('Failed to load help content:', error);
+    const fallback = document.createElement('div');
+    fallback.innerHTML = '<p>Help content could not be loaded. Please check that help-content.html exists.</p>';
+    return fallback;
+  }
+}
+
+// Load help content and initialize modal
+async function initializeHelpModal() {
+  if (helpModalInitialized) {
+    closeUnexpectedOpenModals();
+    return;
+  }
+  helpModalInitialized = true;
+  try {
+    const contentNode = await loadHelpContentNode();
     helpModal = Modal.createHelpModal({
       title: 'Help / User Guide',
-      content: '<p>Help content could not be loaded. Please check that help-content.html exists.</p>'
+      content: contentNode
     });
+
     const helpButton = document.getElementById('btn-help');
     if (helpButton) {
-      helpButton.addEventListener('click', () => helpModal.open());
+      helpButton.onclick = () => {
+        if (!helpModal) {
+          return;
+        }
+        helpModal.open();
+      };
     }
+  } catch (error) {
+    console.error('Failed to initialize help modal:', error);
+  } finally {
+    if (helpModal && helpModal.isOpen) {
+      helpModal.close();
+    }
+    closeUnexpectedOpenModals();
   }
 }
 

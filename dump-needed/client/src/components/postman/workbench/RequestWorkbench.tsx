@@ -121,7 +121,7 @@ export function RequestWorkbench({
   };
 
   return (
-    <div className="tw-flex tw-flex-col tw-gap-4 tw-min-w-0">
+    <div className="api-request-workbench">
       <RequestBar
         method={draft.method}
         url={currentUrl}
@@ -140,7 +140,7 @@ export function RequestWorkbench({
         onClear={onClear}
       />
       {(!editable.method || !editable.path) && (
-        <div className="body-small tw-text-warning">Some request fields are locked by the selected task.</div>
+        <div className="body-small tw-text-warning api-request-lock-note">Some request fields are locked by the selected task.</div>
       )}
       <EditorTabs activeTab={activeTab} onChange={setActiveTab} sections={sections} />
     </div>

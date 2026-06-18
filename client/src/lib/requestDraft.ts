@@ -37,10 +37,10 @@ export function createDefaultDraft(baseUrl: string): RequestDraft {
   return {
     id: generateId(),
     method: 'GET',
-    urlMode: 'split',
+    urlMode: 'full',
     baseUrl,
-    path: '/',
-    fullUrl: `${baseUrl}/`,
+    path: '',
+    fullUrl: '',
     query: [createRow()],
     headers: [createRow()],
     auth: { type: 'none', apiKeyIn: 'header', apiKeyName: 'x-api-key' },

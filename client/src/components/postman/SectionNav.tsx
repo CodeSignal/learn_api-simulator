@@ -8,7 +8,6 @@ interface SectionNavProps {
 
 const ITEMS: Array<{ id: AppSection; label: string }> = [
   { id: 'request', label: 'Request' },
-  { id: 'guided', label: 'Guided Steps' },
   { id: 'activity', label: 'Activity' },
   { id: 'logs', label: 'Logs' }
 ];

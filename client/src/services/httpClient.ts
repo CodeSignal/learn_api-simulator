@@ -19,7 +19,7 @@ function buildSplitUrl(baseUrl: string, path: string, query: RequestKVRow[]): st
 
 function resolveRequestUrl(draft: RequestDraft): string {
   if (draft.urlMode === 'full') {
-    return draft.fullUrl;
+    return draft.fullUrl.trim();
   }
   return buildSplitUrl(draft.baseUrl, draft.path, draft.query);
 }
@@ -73,6 +73,24 @@ function applyAuthQueryParams(url: string, draft: RequestDraft): string {
   return next.toString();
 }
 
+function shouldProxyThroughServer(requestUrl: string): boolean {
+  try {
+    const parsed = new URL(requestUrl);
+    const localSidecarHosts = new Set(['localhost', '127.0.0.1', '::1', '[::1]']);
+    const currentOrigin =
+      typeof window !== 'undefined' && window.location?.origin ? window.location.origin : undefined;
+
+    return (
+      (parsed.protocol === 'http:' || parsed.protocol === 'https:') &&
+      localSidecarHosts.has(parsed.hostname) &&
+      Boolean(parsed.port) &&
+      parsed.origin !== currentOrigin
+    );
+  } catch (_error) {
+    return false;
+  }
+}
+
 export interface ExecuteRequestOptions {
   signal?: AbortSignal;
 }
@@ -81,17 +99,29 @@ export async function executeRequest(
   draft: RequestDraft,
   options?: ExecuteRequestOptions
 ): Promise<RequestExecutionResult> {
-  const requestUrl = applyAuthQueryParams(resolveRequestUrl(draft), draft);
+  const requestUrl = applyAuthQueryParams(resolveRequestUrl(draft), draft).trim();
   const headers = buildHeaders(draft);
   const body = resolveBody(draft);
 
   const start = performance.now();
-  const response = await fetch(requestUrl, {
-    method: draft.method,
-    headers,
-    body,
-    signal: options?.signal
-  });
+  const response = shouldProxyThroughServer(requestUrl)
+    ? await fetch('/api/proxy', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          url: requestUrl,
+          method: draft.method,
+          headers,
+          body: body ?? null
+        }),
+        signal: options?.signal
+      })
+    : await fetch(requestUrl, {
+        method: draft.method,
+        headers,
+        body,
+        signal: options?.signal
+      });
 
   const rawBody = await response.text();
   const durationMs = performance.now() - start;

@@ -18,7 +18,7 @@ const FALLBACK_CONFIG: SimulatorConfig = {
   taskId: 'manual-mode',
   title: 'Manual Request',
   description: 'Compose and send HTTP requests without guided steps.',
-  baseUrl: 'http://localhost:3001/demo-api',
+  baseUrl: '',
   steps: []
 };
 
@@ -65,7 +65,7 @@ function ClientContainer({
   configError: string | null;
 }) {
   const [selectedStepId, setSelectedStepId] = useState<string | null>(null);
-  const [draft, setDraft] = useState<RequestDraft>(() => createDefaultDraft(config.baseUrl ?? 'http://localhost:3001/demo-api'));
+  const [draft, setDraft] = useState<RequestDraft>(() => createDefaultDraft(config.baseUrl ?? ''));
   const [response, setResponse] = useState<HttpResponseData | null>(null);
   const [requestError, setRequestError] = useState<string | null>(null);
   const [checkResults, setCheckResults] = useState<CheckEvaluationResult[]>([]);
@@ -126,7 +126,7 @@ function ClientContainer({
       if (!step) {
         return;
       }
-      setDraft(buildDraftForStep(config.baseUrl ?? 'http://localhost:3001/demo-api', step));
+      setDraft(buildDraftForStep(config.baseUrl ?? '', step));
       addActivity(`Selected step: ${step.title}`);
       void emitEvent(config.taskId, sessionId, 'step_selected', { stepId }, stepId, setToast);
       void updateProgress((prev) => ({ ...prev, lastSelectedStepId: stepId, updatedAt: new Date().toISOString() }));
@@ -262,7 +262,7 @@ function ClientContainer({
   }, [handleSend, isSending]);
 
   const handleNewRequest = useCallback(() => {
-    setDraft(createDefaultDraft(config.baseUrl ?? 'http://localhost:3001/demo-api'));
+    setDraft(createDefaultDraft(config.baseUrl ?? ''));
     setSelectedStepId(null);
     setResponse(null);
     setRequestError(null);

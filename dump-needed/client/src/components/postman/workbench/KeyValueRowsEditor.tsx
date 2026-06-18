@@ -26,59 +26,68 @@ export function KeyValueRowsEditor({
   addLabel = '+ Add row'
 }: KeyValueRowsEditorProps) {
   return (
-    <div className="tw-flex tw-flex-col tw-gap-2">
-      {rows.map((row) => (
-        <div key={row.id} className="tw-grid tw-grid-cols-[auto_1fr_1fr_auto] tw-gap-2 tw-items-center">
-          <label className="input-checkbox">
+    <div className="api-kv-editor">
+      <div className="api-kv-head body-small">
+        <span>On</span>
+        <span>{keyPlaceholder}</span>
+        <span>{valuePlaceholder}</span>
+        <span className="tw-sr-only">Remove</span>
+      </div>
+      <div className="tw-flex tw-flex-col tw-gap-2">
+        {rows.map((row) => (
+          <div key={row.id} className="api-kv-row">
+            <label className="input-checkbox input-checkbox-xsmall tw-self-center">
+              <input
+                type="checkbox"
+                checked={row.enabled}
+                disabled={locked}
+                onChange={(event) => {
+                  onChange(rows.map((item) => (item.id === row.id ? { ...item, enabled: event.target.checked } : item)));
+                }}
+              />
+              <span className="input-checkbox-box">
+                <span className="input-checkbox-checkmark" />
+              </span>
+              <span className="input-checkbox-label tw-sr-only">Enable row</span>
+            </label>
             <input
-              type="checkbox"
-              checked={row.enabled}
+              type="text"
+              className="input"
+              placeholder={keyPlaceholder}
+              value={row.key}
               disabled={locked}
               onChange={(event) => {
-                onChange(rows.map((item) => (item.id === row.id ? { ...item, enabled: event.target.checked } : item)));
+                onChange(rows.map((item) => (item.id === row.id ? { ...item, key: event.target.value } : item)));
               }}
             />
-            <span className="input-checkbox-box">
-              <span className="input-checkbox-checkmark" />
-            </span>
-            <span className="input-checkbox-label tw-sr-only">Enable row</span>
-          </label>
-          <input
-            type="text"
-            className="input"
-            placeholder={keyPlaceholder}
-            value={row.key}
-            disabled={locked}
-            onChange={(event) => {
-              onChange(rows.map((item) => (item.id === row.id ? { ...item, key: event.target.value } : item)));
-            }}
-          />
-          <input
-            type="text"
-            className="input"
-            placeholder={valuePlaceholder}
-            value={row.value}
-            disabled={locked}
-            onChange={(event) => {
-              onChange(rows.map((item) => (item.id === row.id ? { ...item, value: event.target.value } : item)));
-            }}
-          />
-          <button
-            type="button"
-            className="button button-text tw-text-danger"
-            disabled={locked}
-            onClick={() => {
-              onChange(ensureAtLeastOne(rows.filter((item) => item.id !== row.id)));
-            }}
-          >
-            Remove
-          </button>
-        </div>
-      ))}
-      <div className="tw-flex tw-items-center tw-justify-between tw-gap-2">
+            <input
+              type="text"
+              className="input"
+              placeholder={valuePlaceholder}
+              value={row.value}
+              disabled={locked}
+              onChange={(event) => {
+                onChange(rows.map((item) => (item.id === row.id ? { ...item, value: event.target.value } : item)));
+              }}
+            />
+            <button
+              type="button"
+              className="button button-text api-kv-remove"
+              disabled={locked}
+              onClick={() => {
+                onChange(ensureAtLeastOne(rows.filter((item) => item.id !== row.id)));
+              }}
+              aria-label="Remove row"
+            >
+              ✕
+            </button>
+          </div>
+        ))}
+      </div>
+      <div className="tw-flex tw-items-center tw-justify-between tw-gap-2 tw-pt-1">
         <button
           type="button"
-          className="button button-text"
+          className="button button-text api-add-row-button"
           disabled={locked}
           onClick={() => {
             onChange([...rows, { id: generateId(), key: '', value: '', enabled: true }]);

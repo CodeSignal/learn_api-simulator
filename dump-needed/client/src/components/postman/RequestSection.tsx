@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { ConfigRequestPreset } from '../../types/config';
 import { HttpResponseData, RequestDraft, RequestHistoryEntry } from '../../types/http';
 import { HistoryPanel } from '../history/HistoryPanel';
+import { HistoryIcon, TrashIcon } from '../icons';
 import { ResponsePane } from './ResponsePane';
 import { RequestWorkbench } from './workbench/RequestWorkbench';
 
@@ -39,6 +40,8 @@ export function RequestSection({
   onClearHistory
 }: RequestSectionProps) {
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [historyFilter, setHistoryFilter] = useState('');
+  const [confirmClear, setConfirmClear] = useState(false);
 
   const historyTitle = useMemo(() => {
     if (history.length === 0) {
@@ -47,9 +50,20 @@ export function RequestSection({
     return `History (${history.length})`;
   }, [history.length]);
 
+  const filteredHistory = useMemo(() => {
+    if (!historyFilter.trim()) return history;
+    const term = historyFilter.toLowerCase();
+    return history.filter(
+      (e) =>
+        e.method.toLowerCase().includes(term) ||
+        e.url.toLowerCase().includes(term) ||
+        String(e.status).includes(term)
+    );
+  }, [history, historyFilter]);
+
   return (
-    <section className="tw-h-full tw-flex tw-flex-col tw-gap-3 tw-min-h-0">
-      <div className="tw-shrink-0">
+    <section className="api-request-workspace">
+      <div className="api-request-composer">
         <RequestWorkbench
           draft={draft}
           allowEditing={allowEditing}
@@ -62,22 +76,68 @@ export function RequestSection({
         />
       </div>
 
-      <div className="tw-flex-1 tw-min-h-0">
+      <div className="api-response-pane-wrap">
         <ResponsePane response={response} error={requestError} onCopy={onCopyResponse} />
       </div>
 
-      <div className="box card tw-bg-white tw-shrink-0 tw-overflow-hidden">
-        <button
-          type="button"
-          className="button button-text tw-w-full tw-justify-between tw-px-3 tw-py-2"
-          onClick={() => setHistoryOpen((prev) => !prev)}
-        >
-          <span>{historyTitle}</span>
-          <span>{historyOpen ? 'Hide' : 'Show'}</span>
-        </button>
+      <div className="box card non-interactive api-history-drawer tw-shrink-0 tw-overflow-hidden">
+        <div className="api-history-header">
+          <span className="body-default api-history-header-title">
+            <HistoryIcon size={16} />
+            {historyTitle}
+          </span>
+          <div className="api-history-controls">
+            {history.length > 0 && (
+              <>
+                {!confirmClear ? (
+                  <button
+                    type="button"
+                    className="button button-text body-small api-history-clear-btn"
+                    onClick={() => setConfirmClear(true)}
+                    aria-label="Clear history"
+                  >
+                    <TrashIcon size={14} />
+                  </button>
+                ) : (
+                  <div className="tw-flex tw-items-center tw-gap-1">
+                    <span className="body-small" style={{ color: 'var(--danger)' }}>
+                      Clear all?
+                    </span>
+                    <button
+                      type="button"
+                      className="button button-text body-small"
+                      style={{ color: 'var(--danger)' }}
+                      onClick={() => {
+                        onClearHistory();
+                        setConfirmClear(false);
+                      }}
+                    >
+                      Yes
+                    </button>
+                    <button type="button" className="button button-text body-small" onClick={() => setConfirmClear(false)}>
+                      No
+                    </button>
+                  </div>
+                )}
+              </>
+            )}
+            <button type="button" className="button button-text body-small" onClick={() => setHistoryOpen((prev) => !prev)}>
+              {historyOpen ? 'Hide' : 'Show'}
+            </button>
+          </div>
+        </div>
         {historyOpen && (
-          <div className="tw-border-t tw-border-border tw-p-3 tw-max-h-64 tw-overflow-auto">
-            <HistoryPanel entries={history} onSelect={onRestoreHistory} onClear={onClearHistory} />
+          <div className="api-history-content">
+            {history.length > 3 && (
+              <input
+                type="text"
+                className="input api-history-search"
+                placeholder="Filter by method, path, or status…"
+                value={historyFilter}
+                onChange={(e) => setHistoryFilter(e.target.value)}
+              />
+            )}
+            <HistoryPanel entries={filteredHistory} onSelect={onRestoreHistory} />
           </div>
         )}
       </div>
