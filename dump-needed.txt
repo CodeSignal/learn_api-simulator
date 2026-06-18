@@ -73,7 +73,6 @@ function ClientContainer({
   const [requestError, setRequestError] = useState<string | null>(null);
   const [checkResults, setCheckResults] = useState<CheckEvaluationResult[]>([]);
   const [isSending, setIsSending] = useState(false);
-  const [navOpen, setNavOpen] = useState(false);
   const [section, setSection] = useState<AppSection>('request');
   const [toast, setToast] = useState<string | null>(null);
   const [activity, setActivity] = useState<Array<{ id: string; message: string; timestamp: string }>>([]);
@@ -137,13 +136,6 @@ function ClientContainer({
     },
     [addActivity, config.baseUrl, config.steps, config.taskId, sessionId, updateProgress]
   );
-
-  const handleRunStep = useCallback(() => {
-    if (!selectedStepId) {
-      return;
-    }
-    void handleSend();
-  }, [handleSend, selectedStepId]);
 
   const handleSend = useCallback(async () => {
     const jsonError = validateJsonBody(draft);
@@ -254,6 +246,13 @@ function ClientContainer({
     }
   }, [addActivity, addEntry, config.taskId, draft, selectedStep, selectedStepId, sessionId, updateProgress]);
 
+  const handleRunStep = useCallback(() => {
+    if (!selectedStepId) {
+      return;
+    }
+    void handleSend();
+  }, [handleSend, selectedStepId]);
+
   useEffect(() => {
     const listener = (event: KeyboardEvent) => {
       if ((event.ctrlKey || event.metaKey) && event.key === 'Enter' && !isSending) {
@@ -328,13 +327,8 @@ function ClientContainer({
         history={history}
         savedRequests={savedRequests}
         activity={activity}
-        navOpen={navOpen}
         section={section}
-        onToggleNav={() => setNavOpen((prev) => !prev)}
-        onSelectSection={(nextSection) => {
-          setSection(nextSection);
-          setNavOpen(false);
-        }}
+        onSelectSection={setSection}
         onSelectStep={handleSelectStep}
         onRunStep={handleRunStep}
         onDraftChange={setDraft}
@@ -500,19 +494,26 @@ import { RequestHistoryEntry } from '../../types/http';
 interface HistoryPanelProps {
   entries: RequestHistoryEntry[];
   onSelect: (entry: RequestHistoryEntry) => void;
-  onClear: () => void;
 }
 
-export function HistoryPanel({ entries, onSelect, onClear }: HistoryPanelProps) {
+function statusTagClass(status: number): string {
+  if (status >= 200 && status < 300) return 'tag-positive';
+  if (status >= 400) return 'tag-danger';
+  return 'tag-warning';
+}
+
+export function HistoryPanel({ entries, onSelect }: HistoryPanelProps) {
+  const getPath = (rawUrl: string): string => {
+    try {
+      const parsed = new URL(rawUrl);
+      return `${parsed.pathname}${parsed.search}`;
+    } catch (_error) {
+      return rawUrl;
+    }
+  };
+
   return (
     <div className="tw-flex tw-flex-col tw-gap-2">
-      <div className="row-between">
-        <h4 className="heading-small">History</h4>
-        <button type="button" className="button button-text" onClick={onClear}>
-          Clear
-        </button>
-      </div>
-
       {entries.length === 0 ? (
         <p className="body-small tw-opacity-70">No requests yet.</p>
       ) : (
@@ -521,26 +522,176 @@ export function HistoryPanel({ entries, onSelect, onClear }: HistoryPanelProps) 
             <button
               key={entry.id}
               type="button"
-              className="box card tw-text-left tw-p-2 hover:tw-border-primary"
+              className="api-history-item"
               onClick={() => onSelect(entry)}
             >
-              <div className="tw-flex tw-items-center tw-justify-between tw-gap-2">
-                <span className="body-small tw-font-mono tw-opacity-70">
-                  {new Date(entry.timestamp).toLocaleTimeString()}
+              <span className={`api-method-dot api-method-${entry.method.toLowerCase()}`}>{entry.method}</span>
+              <span className="body-default tw-font-medium tw-truncate">{getPath(entry.url)}</span>
+              <span className="body-small tw-font-mono" style={{ color: '#64748b' }}>
+                {new Date(entry.timestamp).toLocaleTimeString()}
+              </span>
+              <span className="api-history-item-meta">
+                <span className={`tag ${entry.status ? statusTagClass(entry.status) : 'tag-neutral'}`}>
+                  {entry.status ?? '–'}
                 </span>
-                <span className="tag tag-neutral">{entry.status ?? '-'}</span>
-              </div>
-              <p className="body-default tw-font-semibold tw-mt-1">
-                {entry.method} <span className="tw-opacity-80 tw-font-normal">{entry.url}</span>
-              </p>
-              {typeof entry.durationMs === 'number' && (
-                <p className="body-small tw-opacity-70">{entry.durationMs.toFixed(0)} ms</p>
-              )}
+                {typeof entry.durationMs === 'number' && (
+                  <span className="tag tag-neutral">{entry.durationMs.toFixed(0)} ms</span>
+                )}
+              </span>
             </button>
           ))}
         </div>
       )}
     </div>
+  );
+}
+
+
+===== FILE: client/src/components/icons.tsx =====
+interface IconProps {
+  size?: number;
+  className?: string;
+}
+
+export function ChevronDownIcon({ size = 16, className }: IconProps) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
+      <polyline points="6 9 12 15 18 9" />
+    </svg>
+  );
+}
+
+export function CopyIcon({ size = 16, className }: IconProps) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
+      <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+    </svg>
+  );
+}
+
+export function HistoryIcon({ size = 16, className }: IconProps) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
+      <circle cx="12" cy="12" r="10" />
+      <polyline points="12 6 12 12 16 14" />
+    </svg>
+  );
+}
+
+export function TrashIcon({ size = 16, className }: IconProps) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
+      <polyline points="3 6 5 6 21 6" />
+      <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+      <path d="M10 11v6" />
+      <path d="M14 11v6" />
+      <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+    </svg>
+  );
+}
+
+export function FilterIcon({ size = 16, className }: IconProps) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
+      <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
+    </svg>
+  );
+}
+
+export function MenuIcon({ size = 16, className }: IconProps) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
+      <line x1="3" y1="6" x2="21" y2="6" />
+      <line x1="3" y1="12" x2="21" y2="12" />
+      <line x1="3" y1="18" x2="21" y2="18" />
+    </svg>
+  );
+}
+
+export function CloseIcon({ size = 16, className }: IconProps) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
+      <line x1="18" y1="6" x2="6" y2="18" />
+      <line x1="6" y1="6" x2="18" y2="18" />
+    </svg>
   );
 }
 
@@ -599,7 +750,7 @@ interface ActivitySectionProps {
 export function ActivitySection({ activity, savedRequests, onRestoreSaved }: ActivitySectionProps) {
   return (
     <section className="tw-grid tw-grid-cols-1 xl:tw-grid-cols-2 tw-gap-3 tw-h-full tw-min-h-0">
-      <div className="box card tw-bg-white tw-p-3 tw-overflow-auto">
+      <div className="box card non-interactive tw-bg-white tw-p-3 tw-overflow-auto">
         <h3 className="heading-small tw-mb-2">Activity Log</h3>
         {activity.length === 0 ? (
           <p className="body-small tw-opacity-70">No activity yet.</p>
@@ -615,7 +766,7 @@ export function ActivitySection({ activity, savedRequests, onRestoreSaved }: Act
         )}
       </div>
 
-      <div className="box card tw-bg-white tw-p-3 tw-overflow-auto">
+      <div className="box card non-interactive tw-bg-white tw-p-3 tw-overflow-auto">
         <h3 className="heading-small tw-mb-2">Saved Requests</h3>
         {savedRequests.length === 0 ? (
           <p className="body-small tw-opacity-70">No saved requests yet.</p>
@@ -668,7 +819,7 @@ export function GuidedStepsSection({
 
   if (steps.length === 0) {
     return (
-      <div className="box card tw-bg-white tw-p-4">
+      <div className="box card non-interactive tw-bg-white tw-p-4">
         <h3 className="heading-small">Guided Steps</h3>
         <p className="body-small tw-opacity-70 tw-mt-2">No guided steps configured for this task.</p>
       </div>
@@ -677,7 +828,7 @@ export function GuidedStepsSection({
 
   return (
     <section className="tw-grid tw-grid-cols-1 lg:tw-grid-cols-[360px_1fr] tw-gap-3 tw-h-full tw-min-h-0">
-      <div className="box card tw-bg-white tw-p-3 tw-overflow-auto">
+      <div className="box card non-interactive tw-bg-white tw-p-3 tw-overflow-auto">
         <StepList
           steps={steps}
           completedStepIds={completedStepIds}
@@ -687,7 +838,7 @@ export function GuidedStepsSection({
       </div>
 
       <div className="tw-space-y-3 tw-min-h-0">
-        <div className="box card tw-bg-white tw-p-3">
+        <div className="box card non-interactive tw-bg-white tw-p-3">
           <div className="row-between tw-gap-2">
             <div>
               <h3 className="heading-small">{selectedStep ? selectedStep.title : 'Select a step'}</h3>
@@ -701,7 +852,7 @@ export function GuidedStepsSection({
           </div>
         </div>
 
-        <div className="box card tw-bg-white tw-p-3 tw-overflow-auto">
+        <div className="box card non-interactive tw-bg-white tw-p-3 tw-overflow-auto">
           <div className="row-between tw-mb-2">
             <h4 className="heading-small">Check Results</h4>
             {selectedStep && (
@@ -718,14 +869,180 @@ export function GuidedStepsSection({
 }
 
 
+===== FILE: client/src/components/postman/LogsSection.tsx =====
+import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
+import { fetchRecentEvents } from '../../services/loggingApi';
+import { EventType, SimulatorEvent } from '../../types/events';
+import { CopyIcon, FilterIcon } from '../icons';
+
+const EVENT_TYPES: EventType[] = [
+  'app_loaded',
+  'step_selected',
+  'request_sent',
+  'response_received',
+  'checks_evaluated',
+  'check_result',
+  'step_completed',
+  'request_saved',
+  'history_restored',
+  'progress_saved',
+  'error'
+];
+
+export function LogsSection() {
+  const [events, setEvents] = useState<SimulatorEvent[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedTypes, setSelectedTypes] = useState<Set<EventType>>(new Set(EVENT_TYPES));
+  const [expandedKey, setExpandedKey] = useState<string | null>(null);
+
+  const loadEvents = useCallback(async () => {
+    setLoading(true);
+    const data = await fetchRecentEvents({ limit: 200 });
+    setEvents(data);
+    setLoading(false);
+  }, []);
+
+  useEffect(() => {
+    void loadEvents();
+  }, [loadEvents]);
+
+  const filtered = useMemo(
+    () => events.filter((e) => selectedTypes.has(e.eventType)),
+    [events, selectedTypes]
+  );
+
+  const toggleType = (type: EventType) => {
+    setSelectedTypes((prev) => {
+      const next = new Set(prev);
+      if (next.has(type)) next.delete(type);
+      else next.add(type);
+      return next;
+    });
+  };
+
+  const copyEvent = async (event: SimulatorEvent) => {
+    try {
+      await navigator.clipboard.writeText(JSON.stringify(event, null, 2));
+    } catch {
+      // clipboard API may fail in non-secure contexts
+    }
+  };
+
+  const eventKey = (e: SimulatorEvent, i: number) => `${e.timestamp}-${e.eventType}-${i}`;
+
+  return (
+    <section className="api-logs-section tw-h-full tw-flex tw-flex-col tw-gap-3 tw-min-h-0">
+      {/* Filter bar */}
+      <div className="api-logs-filter-bar">
+        <div className="tw-flex tw-items-center tw-gap-2 tw-flex-wrap">
+          <FilterIcon size={14} className="tw-shrink-0" />
+          {EVENT_TYPES.map((type) => (
+            <button
+              key={type}
+              type="button"
+              className={`api-logs-type-chip ${selectedTypes.has(type) ? 'api-logs-type-chip-active' : ''}`}
+              onClick={() => toggleType(type)}
+            >
+              {type}
+            </button>
+          ))}
+        </div>
+        <button type="button" className="button button-text body-small" onClick={() => void loadEvents()}>
+          Refresh
+        </button>
+      </div>
+
+      {/* Events list */}
+      <div className="api-logs-list tw-flex-1 tw-min-h-0 tw-overflow-auto">
+        {loading ? (
+          <p className="body-small tw-opacity-70 tw-p-4">Loading events…</p>
+        ) : filtered.length === 0 ? (
+          <p className="body-small tw-opacity-70 tw-p-4">No events match the current filter.</p>
+        ) : (
+          <table className="api-logs-table">
+            <thead>
+              <tr>
+                <th>Time</th>
+                <th>Event</th>
+                <th>Step</th>
+                <th>Session</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((event, i) => {
+                const key = eventKey(event, i);
+                const isExpanded = expandedKey === key;
+                return (
+                  <Fragment key={key}>
+                    <tr
+                      className={`api-logs-row ${isExpanded ? 'api-logs-row-expanded' : ''}`}
+                      onClick={() => setExpandedKey(isExpanded ? null : key)}
+                    >
+                      <td className="api-logs-cell-time">
+                        {new Date(event.timestamp).toLocaleTimeString()}
+                      </td>
+                      <td>
+                        <span
+                          className={`api-logs-event-badge ${event.eventType === 'error' ? 'api-logs-event-error' : ''}`}
+                        >
+                          {event.eventType}
+                        </span>
+                      </td>
+                      <td className="body-small">{event.stepId ?? '–'}</td>
+                      <td className="body-small tw-font-mono tw-truncate" style={{ maxWidth: '120px' }}>
+                        {event.sessionId.slice(0, 8)}
+                      </td>
+                      <td>
+                        <button
+                          type="button"
+                          className="button button-text api-logs-copy-btn"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            void copyEvent(event);
+                          }}
+                          aria-label="Copy event JSON"
+                        >
+                          <CopyIcon size={14} />
+                        </button>
+                      </td>
+                    </tr>
+                    {isExpanded && (
+                      <tr className="api-logs-payload-row">
+                        <td colSpan={5}>
+                          <pre className="api-logs-payload-code">
+                            {JSON.stringify(event.payload, null, 2)}
+                          </pre>
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
+                );
+              })}
+            </tbody>
+          </table>
+        )}
+      </div>
+    </section>
+  );
+}
+
+
 ===== FILE: client/src/components/postman/PostmanPage.tsx =====
-import { CheckEvaluationResult } from '../../lib/checks';
-import { SimulatorConfig } from '../../types/config';
-import { HttpResponseData, RequestDraft, RequestHistoryEntry } from '../../types/http';
-import { ActivitySection } from './ActivitySection';
-import { GuidedStepsSection } from './GuidedStepsSection';
-import { RequestSection } from './RequestSection';
-import { AppSection, SectionNav } from './SectionNav';
+import { useEffect, useState } from "react";
+import { CheckEvaluationResult } from "../../lib/checks";
+import { SimulatorConfig } from "../../types/config";
+import {
+  HttpResponseData,
+  RequestDraft,
+  RequestHistoryEntry,
+} from "../../types/http";
+import { CloseIcon, MenuIcon } from "../icons";
+import { ActivitySection } from "./ActivitySection";
+import { GuidedStepsSection } from "./GuidedStepsSection";
+import { LogsSection } from "./LogsSection";
+import { RequestSection } from "./RequestSection";
+import { AppSection } from "./SectionNav";
 
 interface SavedRequest {
   id: string;
@@ -739,6 +1056,13 @@ interface ActivityItem {
   timestamp: string;
 }
 
+const SECTION_LABELS: Record<AppSection, string> = {
+  request: "Request",
+  guided: "Guided Steps",
+  activity: "Activity",
+  logs: "Logs",
+};
+
 interface PostmanPageProps {
   config: SimulatorConfig;
   draft: RequestDraft;
@@ -751,9 +1075,7 @@ interface PostmanPageProps {
   history: RequestHistoryEntry[];
   savedRequests: SavedRequest[];
   activity: ActivityItem[];
-  navOpen: boolean;
   section: AppSection;
-  onToggleNav: () => void;
   onSelectSection: (section: AppSection) => void;
   onSelectStep: (stepId: string | null) => void;
   onRunStep: () => void;
@@ -768,6 +1090,8 @@ interface PostmanPageProps {
   onRestoreSaved: (item: SavedRequest) => void;
 }
 
+const SECTIONS: AppSection[] = ["request", "guided", "activity", "logs"];
+
 export function PostmanPage({
   config,
   draft,
@@ -780,9 +1104,7 @@ export function PostmanPage({
   history,
   savedRequests,
   activity,
-  navOpen,
   section,
-  onToggleNav,
   onSelectSection,
   onSelectStep,
   onRunStep,
@@ -794,61 +1116,126 @@ export function PostmanPage({
   onCopyResponse,
   onRestoreHistory,
   onClearHistory,
-  onRestoreSaved
+  onRestoreSaved,
 }: PostmanPageProps) {
-  const pageTitle = section === 'request' ? 'Request Workspace' : section === 'guided' ? 'Guided Steps' : 'Activity & Saved';
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // Close mobile menu on Escape
+  useEffect(() => {
+    if (!mobileMenuOpen) return;
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMobileMenuOpen(false);
+    };
+    window.addEventListener("keydown", handleEscape);
+    return () => window.removeEventListener("keydown", handleEscape);
+  }, [mobileMenuOpen]);
 
   return (
     <div className="api-sim-app tw-w-full tw-h-full tw-overflow-hidden">
-      <div className="api-sim-topbar tw-flex tw-items-center tw-justify-between tw-gap-2 tw-p-3">
-        <div>
-          <h2 className="heading-small tw-text-[#0f172a]">{config.title}</h2>
-          <p className="body-small tw-text-[#334155]">{pageTitle}</p>
+      <div className="api-sim-topbar">
+        <div className="api-sim-brand">
+          <h2 className="heading-small">API Simulator</h2>
         </div>
-        <div className="tw-flex tw-gap-2">
-          <button type="button" className="button button-text lg:tw-hidden" onClick={onToggleNav}>
-            {navOpen ? 'Close Menu' : 'Menu'}
+        <div className="api-sim-topbar-controls">
+          <div
+            className="api-sim-section-switcher"
+            role="tablist"
+            aria-label="Workspace sections"
+          >
+            {SECTIONS.map((id) => (
+              <button
+                key={id}
+                type="button"
+                role="tab"
+                aria-selected={section === id}
+                className={`api-section-tab ${section === id ? "api-section-tab-active" : ""}`}
+                onClick={() => onSelectSection(id)}
+              >
+                {SECTION_LABELS[id]}
+              </button>
+            ))}
+          </div>
+          {/* <button
+            type="button"
+            className="button button-text api-help-button"
+            onClick={() => {
+              const helpButton = document.getElementById('btn-help') as HTMLButtonElement | null;
+              helpButton?.click();
+            }}
+          >
+            Help
+          </button> */}
+          <button
+            type="button"
+            className="api-mobile-menu-toggle"
+            aria-label="Open navigation menu"
+            onClick={() => setMobileMenuOpen(true)}
+          >
+            <MenuIcon size={20} />
           </button>
-          {section !== 'request' && (
-            <button type="button" className="button button-secondary" onClick={() => onSelectSection('request')}>
-              Go to Request
-            </button>
-          )}
         </div>
       </div>
 
-      <div className="api-sim-layout">
-        <SectionNav
-          active={section}
-          open={navOpen}
-          onSelect={onSelectSection}
-        />
+      {/* Mobile nav overlay */}
+      {mobileMenuOpen && (
+        <div
+          className="api-mobile-nav-overlay api-mobile-nav-open"
+          onClick={() => setMobileMenuOpen(false)}
+        >
+          <nav
+            className="api-mobile-nav-panel"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              className="api-mobile-menu-toggle tw-self-end"
+              aria-label="Close navigation menu"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              <CloseIcon size={20} />
+            </button>
+            {SECTIONS.map((id) => (
+              <button
+                key={id}
+                type="button"
+                className={`api-mobile-nav-item ${section === id ? "api-mobile-nav-item-active" : ""}`}
+                onClick={() => {
+                  onSelectSection(id);
+                  setMobileMenuOpen(false);
+                }}
+              >
+                {SECTION_LABELS[id]}
+              </button>
+            ))}
+          </nav>
+        </div>
+      )}
 
-        <section className="api-sim-layout-main tw-min-h-0 tw-overflow-hidden tw-p-3">
-          {section === 'request' && (
-            <div className="tw-grid tw-grid-cols-1 tw-gap-3 tw-h-full tw-min-h-0">
-              <div className="tw-h-full tw-min-h-0">
-                <RequestSection
-                  draft={draft}
-                  allowEditing={config.steps.find((step) => step.id === selectedStepId)?.request.allowEditing}
-                  isSending={isSending}
-                  response={response}
-                  requestError={requestError}
-                  history={history}
-                  onDraftChange={onDraftChange}
-                  onSend={onSend}
-                  onCopyCurl={onCopyCurl}
-                  onSaveRequest={onSaveRequest}
-                  onNewRequest={onNewRequest}
-                  onCopyResponse={onCopyResponse}
-                  onRestoreHistory={onRestoreHistory}
-                  onClearHistory={onClearHistory}
-                />
-              </div>
-            </div>
+      <div className="api-sim-layout">
+        <section className="api-sim-layout-main tw-min-h-0 tw-overflow-hidden tw-p-4">
+          {section === "request" && (
+            <RequestSection
+              draft={draft}
+              allowEditing={
+                config.steps.find((step) => step.id === selectedStepId)?.request
+                  .allowEditing
+              }
+              isSending={isSending}
+              response={response}
+              requestError={requestError}
+              history={history}
+              onDraftChange={onDraftChange}
+              onSend={onSend}
+              onCopyCurl={onCopyCurl}
+              onSaveRequest={onSaveRequest}
+              onNewRequest={onNewRequest}
+              onCopyResponse={onCopyResponse}
+              onRestoreHistory={onRestoreHistory}
+              onClearHistory={onClearHistory}
+            />
           )}
 
-          {section === 'guided' && (
+          {section === "guided" && (
             <GuidedStepsSection
               steps={config.steps}
               selectedStepId={selectedStepId}
@@ -860,9 +1247,15 @@ export function PostmanPage({
             />
           )}
 
-          {section === 'activity' && (
-            <ActivitySection activity={activity} savedRequests={savedRequests} onRestoreSaved={onRestoreSaved} />
+          {section === "activity" && (
+            <ActivitySection
+              activity={activity}
+              savedRequests={savedRequests}
+              onRestoreSaved={onRestoreSaved}
+            />
           )}
+
+          {section === "logs" && <LogsSection />}
         </section>
       </div>
     </div>
@@ -875,6 +1268,7 @@ import { useMemo, useState } from 'react';
 import { ConfigRequestPreset } from '../../types/config';
 import { HttpResponseData, RequestDraft, RequestHistoryEntry } from '../../types/http';
 import { HistoryPanel } from '../history/HistoryPanel';
+import { HistoryIcon, TrashIcon } from '../icons';
 import { ResponsePane } from './ResponsePane';
 import { RequestWorkbench } from './workbench/RequestWorkbench';
 
@@ -912,6 +1306,8 @@ export function RequestSection({
   onClearHistory
 }: RequestSectionProps) {
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [historyFilter, setHistoryFilter] = useState('');
+  const [confirmClear, setConfirmClear] = useState(false);
 
   const historyTitle = useMemo(() => {
     if (history.length === 0) {
@@ -920,9 +1316,20 @@ export function RequestSection({
     return `History (${history.length})`;
   }, [history.length]);
 
+  const filteredHistory = useMemo(() => {
+    if (!historyFilter.trim()) return history;
+    const term = historyFilter.toLowerCase();
+    return history.filter(
+      (e) =>
+        e.method.toLowerCase().includes(term) ||
+        e.url.toLowerCase().includes(term) ||
+        String(e.status).includes(term)
+    );
+  }, [history, historyFilter]);
+
   return (
-    <section className="tw-h-full tw-flex tw-flex-col tw-gap-3 tw-min-h-0">
-      <div className="tw-shrink-0">
+    <section className="api-request-workspace">
+      <div className="api-request-composer">
         <RequestWorkbench
           draft={draft}
           allowEditing={allowEditing}
@@ -935,22 +1342,68 @@ export function RequestSection({
         />
       </div>
 
-      <div className="tw-flex-1 tw-min-h-0">
+      <div className="api-response-pane-wrap">
         <ResponsePane response={response} error={requestError} onCopy={onCopyResponse} />
       </div>
 
-      <div className="box card tw-bg-white tw-shrink-0 tw-overflow-hidden">
-        <button
-          type="button"
-          className="button button-text tw-w-full tw-justify-between tw-px-3 tw-py-2"
-          onClick={() => setHistoryOpen((prev) => !prev)}
-        >
-          <span>{historyTitle}</span>
-          <span>{historyOpen ? 'Hide' : 'Show'}</span>
-        </button>
+      <div className="box card non-interactive api-history-drawer tw-shrink-0 tw-overflow-hidden">
+        <div className="api-history-header">
+          <span className="body-default api-history-header-title">
+            <HistoryIcon size={16} />
+            {historyTitle}
+          </span>
+          <div className="api-history-controls">
+            {history.length > 0 && (
+              <>
+                {!confirmClear ? (
+                  <button
+                    type="button"
+                    className="button button-text body-small api-history-clear-btn"
+                    onClick={() => setConfirmClear(true)}
+                    aria-label="Clear history"
+                  >
+                    <TrashIcon size={14} />
+                  </button>
+                ) : (
+                  <div className="tw-flex tw-items-center tw-gap-1">
+                    <span className="body-small" style={{ color: 'var(--danger)' }}>
+                      Clear all?
+                    </span>
+                    <button
+                      type="button"
+                      className="button button-text body-small"
+                      style={{ color: 'var(--danger)' }}
+                      onClick={() => {
+                        onClearHistory();
+                        setConfirmClear(false);
+                      }}
+                    >
+                      Yes
+                    </button>
+                    <button type="button" className="button button-text body-small" onClick={() => setConfirmClear(false)}>
+                      No
+                    </button>
+                  </div>
+                )}
+              </>
+            )}
+            <button type="button" className="button button-text body-small" onClick={() => setHistoryOpen((prev) => !prev)}>
+              {historyOpen ? 'Hide' : 'Show'}
+            </button>
+          </div>
+        </div>
         {historyOpen && (
-          <div className="tw-border-t tw-border-border tw-p-3 tw-max-h-64 tw-overflow-auto">
-            <HistoryPanel entries={history} onSelect={onRestoreHistory} onClear={onClearHistory} />
+          <div className="api-history-content">
+            {history.length > 3 && (
+              <input
+                type="text"
+                className="input api-history-search"
+                placeholder="Filter by method, path, or status…"
+                value={historyFilter}
+                onChange={(e) => setHistoryFilter(e.target.value)}
+              />
+            )}
+            <HistoryPanel entries={filteredHistory} onSelect={onRestoreHistory} />
           </div>
         )}
       </div>
@@ -962,6 +1415,7 @@ export function RequestSection({
 ===== FILE: client/src/components/postman/ResponsePane.tsx =====
 import { useState } from 'react';
 import { HttpResponseData } from '../../types/http';
+import { CopyIcon } from '../icons';
 
 interface ResponsePaneProps {
   response: HttpResponseData | null;
@@ -986,7 +1440,7 @@ export function ResponsePane({ response, error, onCopy }: ResponsePaneProps) {
 
   if (error) {
     return (
-      <div className="box card tw-bg-white tw-p-4 tw-border tw-border-danger">
+      <div className="api-response-pane api-response-pane-error tw-h-full">
         <h3 className="heading-small tw-text-danger">Request error</h3>
         <p className="body-default tw-mt-2 tw-text-danger">{error}</p>
       </div>
@@ -995,45 +1449,49 @@ export function ResponsePane({ response, error, onCopy }: ResponsePaneProps) {
 
   if (!response) {
     return (
-      <div className="box card tw-bg-white tw-p-8 tw-text-center tw-h-full tw-flex tw-items-center tw-justify-center">
-        <p className="heading-small">Send a request to see a response.</p>
+      <div className="api-response-pane api-response-empty tw-h-full">
+        <div className="api-response-empty-hint">
+          <p className="heading-small">No Response Yet</p>
+          <p>Send a request to see the response here.</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="box card tw-bg-white tw-p-3 tw-space-y-3 tw-min-w-0 tw-h-full tw-flex tw-flex-col">
-      <div className="tw-flex tw-flex-wrap tw-items-center tw-justify-between tw-gap-2">
+    <div className="api-response-pane tw-min-w-0 tw-h-full tw-flex tw-flex-col">
+      <div className="api-response-summary">
         <div className="tw-flex tw-flex-wrap tw-gap-2 tw-items-center">
           <span className={`tag ${statusClass(response.status)}`}>{response.status}</span>
           <span className="body-default">{response.statusText}</span>
           <span className="tag tag-neutral">{Math.round(response.durationMs)} ms</span>
           <span className="tag tag-neutral">{response.sizeBytes} bytes</span>
         </div>
-        <button type="button" className="button button-text" onClick={onCopy}>
-          Copy response
+        <button type="button" className="button button-text api-copy-response-btn" onClick={onCopy}>
+          <CopyIcon size={14} />
+          <span>Copy</span>
         </button>
       </div>
 
-      <div className="tw-flex tw-flex-wrap tw-gap-2" role="tablist" aria-label="Response tabs">
-        <button type="button" className={`button ${tab === 'pretty' ? 'button-primary' : 'button-text'}`} onClick={() => setTab('pretty')}>
+      <div className="api-tab-row api-response-tabs" role="tablist" aria-label="Response tabs">
+        <button type="button" className={`api-tab ${tab === 'pretty' ? 'api-tab-active' : ''}`} onClick={() => setTab('pretty')}>
           Pretty
         </button>
-        <button type="button" className={`button ${tab === 'raw' ? 'button-primary' : 'button-text'}`} onClick={() => setTab('raw')}>
+        <button type="button" className={`api-tab ${tab === 'raw' ? 'api-tab-active' : ''}`} onClick={() => setTab('raw')}>
           Raw
         </button>
-        <button type="button" className={`button ${tab === 'headers' ? 'button-primary' : 'button-text'}`} onClick={() => setTab('headers')}>
+        <button type="button" className={`api-tab ${tab === 'headers' ? 'api-tab-active' : ''}`} onClick={() => setTab('headers')}>
           Headers
         </button>
       </div>
 
-      <div className="tw-flex-1 tw-min-h-[260px] tw-overflow-auto">
+      <div className="api-response-viewer">
         {tab !== 'headers' ? (
-          <pre className="tw-h-full tw-overflow-auto tw-rounded tw-border tw-border-border tw-bg-surface tw-p-3 tw-font-mono tw-text-sm">
+          <pre className="api-response-code">
             {tab === 'pretty' ? response.prettyBody : response.rawBody}
           </pre>
         ) : (
-          <div className="tw-h-full tw-overflow-auto tw-space-y-1 tw-rounded tw-border tw-border-border tw-bg-surface tw-p-3">
+          <div className="api-response-headers">
             {Object.entries(response.headers).map(([key, value]) => (
               <div key={key} className="tw-grid tw-grid-cols-[minmax(140px,220px)_1fr] tw-gap-2 tw-items-start">
                 <span className="body-small tw-font-semibold">{key}</span>
@@ -1049,7 +1507,7 @@ export function ResponsePane({ response, error, onCopy }: ResponsePaneProps) {
 
 
 ===== FILE: client/src/components/postman/SectionNav.tsx =====
-export type AppSection = 'request' | 'guided' | 'activity';
+export type AppSection = 'request' | 'guided' | 'activity' | 'logs';
 
 interface SectionNavProps {
   active: AppSection;
@@ -1060,7 +1518,8 @@ interface SectionNavProps {
 const ITEMS: Array<{ id: AppSection; label: string }> = [
   { id: 'request', label: 'Request' },
   { id: 'guided', label: 'Guided Steps' },
-  { id: 'activity', label: 'Activity' }
+  { id: 'activity', label: 'Activity' },
+  { id: 'logs', label: 'Logs' }
 ];
 
 export function SectionNav({ active, open, onSelect }: SectionNavProps) {
@@ -1178,9 +1637,9 @@ interface AuthEditorProps {
 
 export function AuthEditor({ auth, locked, onChange }: AuthEditorProps) {
   return (
-    <div className="tw-space-y-3">
+    <div className="api-auth-editor">
       <label className="tw-flex tw-flex-col tw-gap-1">
-        <span className="body-small tw-opacity-70">Auth type</span>
+        <span className="body-small api-field-label">Auth type</span>
         <select
           className="input"
           value={auth.type}
@@ -1204,7 +1663,7 @@ export function AuthEditor({ auth, locked, onChange }: AuthEditorProps) {
 
       {auth.type === 'bearer' && (
         <label className="tw-flex tw-flex-col tw-gap-1">
-          <span className="body-small tw-opacity-70">Token</span>
+          <span className="body-small api-field-label">Token</span>
           <input
             className="input"
             type="password"
@@ -1218,7 +1677,7 @@ export function AuthEditor({ auth, locked, onChange }: AuthEditorProps) {
       {auth.type === 'basic' && (
         <div className="tw-grid tw-grid-cols-1 md:tw-grid-cols-2 tw-gap-2">
           <label className="tw-flex tw-flex-col tw-gap-1">
-            <span className="body-small tw-opacity-70">Username</span>
+            <span className="body-small api-field-label">Username</span>
             <input
               className="input"
               type="text"
@@ -1228,7 +1687,7 @@ export function AuthEditor({ auth, locked, onChange }: AuthEditorProps) {
             />
           </label>
           <label className="tw-flex tw-flex-col tw-gap-1">
-            <span className="body-small tw-opacity-70">Password</span>
+            <span className="body-small api-field-label">Password</span>
             <input
               className="input"
               type="password"
@@ -1243,7 +1702,7 @@ export function AuthEditor({ auth, locked, onChange }: AuthEditorProps) {
       {auth.type === 'apiKey' && (
         <div className="tw-grid tw-grid-cols-1 md:tw-grid-cols-[1fr_180px_1fr] tw-gap-2">
           <label className="tw-flex tw-flex-col tw-gap-1">
-            <span className="body-small tw-opacity-70">Key</span>
+            <span className="body-small api-field-label">Key</span>
             <input
               className="input"
               type="text"
@@ -1253,7 +1712,7 @@ export function AuthEditor({ auth, locked, onChange }: AuthEditorProps) {
             />
           </label>
           <label className="tw-flex tw-flex-col tw-gap-1">
-            <span className="body-small tw-opacity-70">Add to</span>
+            <span className="body-small api-field-label">Add to</span>
             <select
               className="input"
               value={auth.apiKeyIn ?? 'header'}
@@ -1265,7 +1724,7 @@ export function AuthEditor({ auth, locked, onChange }: AuthEditorProps) {
             </select>
           </label>
           <label className="tw-flex tw-flex-col tw-gap-1">
-            <span className="body-small tw-opacity-70">Value</span>
+            <span className="body-small api-field-label">Value</span>
             <input
               className="input"
               type="password"
@@ -1308,13 +1767,13 @@ export function BodyEditor({
   onPrettify
 }: BodyEditorProps) {
   return (
-    <div className="tw-space-y-3">
-      <div className="tw-flex tw-flex-wrap tw-gap-2">
+    <div className="api-body-editor">
+      <div className="api-tab-row api-body-mode-row">
         {BODY_MODES.map((item) => (
           <button
             key={item}
             type="button"
-            className={`button ${item === mode ? 'button-primary' : 'button-text'}`}
+            className={`api-tab ${item === mode ? 'api-tab-active' : ''}`}
             disabled={locked}
             onClick={() => onChangeMode(item)}
           >
@@ -1322,15 +1781,19 @@ export function BodyEditor({
           </button>
         ))}
         {mode === 'json' && (
-          <button type="button" className="button button-text" disabled={locked} onClick={onPrettify}>
+          <button type="button" className="button button-text api-body-beautify" disabled={locked} onClick={onPrettify}>
             Beautify
           </button>
         )}
       </div>
 
-      {mode !== 'none' && (
+      {mode === 'none' ? (
+        <div className="api-body-none-hint">
+          This request does not have a body. Select a body type above to add one.
+        </div>
+      ) : (
         <textarea
-          className="input tw-min-h-56 tw-font-mono"
+          className={`input api-body-textarea ${jsonError ? 'tw-border-danger' : ''}`}
           disabled={locked}
           value={text}
           onChange={(event) => onChangeText(event.target.value)}
@@ -1365,8 +1828,8 @@ const TAB_ITEMS: Array<{ id: EditorTabKey; label: string }> = [
 
 export function EditorTabs({ activeTab, onChange, sections }: EditorTabsProps) {
   return (
-    <div className="box card tw-bg-white tw-p-3 tw-space-y-3 tw-min-h-[240px]">
-      <div className="tw-flex tw-flex-wrap tw-gap-2" role="tablist" aria-label="Request editor tabs">
+    <div className="api-editor-panel">
+      <div className="api-tab-row" role="tablist" aria-label="Request editor tabs">
         {TAB_ITEMS.map((tab) => {
           const isActive = activeTab === tab.id;
           return (
@@ -1376,7 +1839,7 @@ export function EditorTabs({ activeTab, onChange, sections }: EditorTabsProps) {
               role="tab"
               aria-selected={isActive}
               tabIndex={isActive ? 0 : -1}
-              className={`button ${isActive ? 'button-primary' : 'button-text'}`}
+              className={`api-tab ${isActive ? 'api-tab-active' : ''}`}
               onClick={() => onChange(tab.id)}
             >
               {tab.label}
@@ -1384,7 +1847,7 @@ export function EditorTabs({ activeTab, onChange, sections }: EditorTabsProps) {
           );
         })}
       </div>
-      <div role="tabpanel" className="tw-max-h-[300px] tw-overflow-auto">
+      <div role="tabpanel" className="api-editor-content">
         {sections[activeTab]}
       </div>
     </div>
@@ -1405,7 +1868,7 @@ interface HeadersEditorProps {
 export function HeadersEditor({ rows, locked, onChange }: HeadersEditorProps) {
   return (
     <div className="tw-space-y-3">
-      <p className="body-small tw-opacity-70">Headers are sent exactly as enabled in this table.</p>
+      <p className="body-small api-editor-hint">Headers are sent exactly as enabled in this table.</p>
       <KeyValueRowsEditor rows={rows} locked={locked} onChange={onChange} keyPlaceholder="Header" valuePlaceholder="Value" />
     </div>
   );
@@ -1441,59 +1904,68 @@ export function KeyValueRowsEditor({
   addLabel = '+ Add row'
 }: KeyValueRowsEditorProps) {
   return (
-    <div className="tw-flex tw-flex-col tw-gap-2">
-      {rows.map((row) => (
-        <div key={row.id} className="tw-grid tw-grid-cols-[auto_1fr_1fr_auto] tw-gap-2 tw-items-center">
-          <label className="input-checkbox">
+    <div className="api-kv-editor">
+      <div className="api-kv-head body-small">
+        <span>On</span>
+        <span>{keyPlaceholder}</span>
+        <span>{valuePlaceholder}</span>
+        <span className="tw-sr-only">Remove</span>
+      </div>
+      <div className="tw-flex tw-flex-col tw-gap-2">
+        {rows.map((row) => (
+          <div key={row.id} className="api-kv-row">
+            <label className="input-checkbox input-checkbox-xsmall tw-self-center">
+              <input
+                type="checkbox"
+                checked={row.enabled}
+                disabled={locked}
+                onChange={(event) => {
+                  onChange(rows.map((item) => (item.id === row.id ? { ...item, enabled: event.target.checked } : item)));
+                }}
+              />
+              <span className="input-checkbox-box">
+                <span className="input-checkbox-checkmark" />
+              </span>
+              <span className="input-checkbox-label tw-sr-only">Enable row</span>
+            </label>
             <input
-              type="checkbox"
-              checked={row.enabled}
+              type="text"
+              className="input"
+              placeholder={keyPlaceholder}
+              value={row.key}
               disabled={locked}
               onChange={(event) => {
-                onChange(rows.map((item) => (item.id === row.id ? { ...item, enabled: event.target.checked } : item)));
+                onChange(rows.map((item) => (item.id === row.id ? { ...item, key: event.target.value } : item)));
               }}
             />
-            <span className="input-checkbox-box">
-              <span className="input-checkbox-checkmark" />
-            </span>
-            <span className="input-checkbox-label tw-sr-only">Enable row</span>
-          </label>
-          <input
-            type="text"
-            className="input"
-            placeholder={keyPlaceholder}
-            value={row.key}
-            disabled={locked}
-            onChange={(event) => {
-              onChange(rows.map((item) => (item.id === row.id ? { ...item, key: event.target.value } : item)));
-            }}
-          />
-          <input
-            type="text"
-            className="input"
-            placeholder={valuePlaceholder}
-            value={row.value}
-            disabled={locked}
-            onChange={(event) => {
-              onChange(rows.map((item) => (item.id === row.id ? { ...item, value: event.target.value } : item)));
-            }}
-          />
-          <button
-            type="button"
-            className="button button-text tw-text-danger"
-            disabled={locked}
-            onClick={() => {
-              onChange(ensureAtLeastOne(rows.filter((item) => item.id !== row.id)));
-            }}
-          >
-            Remove
-          </button>
-        </div>
-      ))}
-      <div className="tw-flex tw-items-center tw-justify-between tw-gap-2">
+            <input
+              type="text"
+              className="input"
+              placeholder={valuePlaceholder}
+              value={row.value}
+              disabled={locked}
+              onChange={(event) => {
+                onChange(rows.map((item) => (item.id === row.id ? { ...item, value: event.target.value } : item)));
+              }}
+            />
+            <button
+              type="button"
+              className="button button-text api-kv-remove"
+              disabled={locked}
+              onClick={() => {
+                onChange(ensureAtLeastOne(rows.filter((item) => item.id !== row.id)));
+              }}
+              aria-label="Remove row"
+            >
+              ✕
+            </button>
+          </div>
+        ))}
+      </div>
+      <div className="tw-flex tw-items-center tw-justify-between tw-gap-2 tw-pt-1">
         <button
           type="button"
-          className="button button-text"
+          className="button button-text api-add-row-button"
           disabled={locked}
           onClick={() => {
             onChange([...rows, { id: generateId(), key: '', value: '', enabled: true }]);
@@ -1521,7 +1993,7 @@ interface ParamsEditorProps {
 export function ParamsEditor({ rows, locked, onChange }: ParamsEditorProps) {
   return (
     <div className="tw-space-y-3">
-      <p className="body-small tw-opacity-70">Configure query parameters that will be appended to the URL.</p>
+      <p className="body-small api-editor-hint">Configure query parameters that will be appended to the URL.</p>
       <KeyValueRowsEditor rows={rows} locked={locked} onChange={onChange} keyPlaceholder="Param" valuePlaceholder="Value" />
     </div>
   );
@@ -1529,7 +2001,9 @@ export function ParamsEditor({ rows, locked, onChange }: ParamsEditorProps) {
 
 
 ===== FILE: client/src/components/postman/workbench/RequestBar.tsx =====
+import { useEffect, useRef, useState } from 'react';
 import { HttpMethod } from '../../../types/http';
+import { ChevronDownIcon } from '../../icons';
 
 interface RequestBarProps {
   method: HttpMethod;
@@ -1554,8 +2028,9 @@ function methodClass(method: HttpMethod): string {
     case 'POST':
       return 'api-method-post';
     case 'PUT':
-    case 'PATCH':
       return 'api-method-put';
+    case 'PATCH':
+      return 'api-method-patch';
     case 'DELETE':
       return 'api-method-delete';
     default:
@@ -1576,51 +2051,120 @@ export function RequestBar({
   onSave,
   onClear
 }: RequestBarProps) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const sendMenuRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!menuOpen) {
+      return;
+    }
+
+    const handlePointerDown = (event: MouseEvent) => {
+      if (!sendMenuRef.current?.contains(event.target as Node)) {
+        setMenuOpen(false);
+      }
+    };
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setMenuOpen(false);
+      }
+    };
+
+    window.addEventListener('mousedown', handlePointerDown);
+    window.addEventListener('keydown', handleEscape);
+    return () => {
+      window.removeEventListener('mousedown', handlePointerDown);
+      window.removeEventListener('keydown', handleEscape);
+    };
+  }, [menuOpen]);
+
   return (
-    <div className="box card tw-bg-white tw-p-3">
-      <div className="tw-grid tw-grid-cols-1 lg:tw-grid-cols-[120px_1fr_auto] tw-gap-2 tw-items-end">
-        <label className="tw-flex tw-flex-col tw-gap-1">
-          <span className="body-small tw-opacity-70">Method</span>
-          <select
-            className={`input ${methodClass(method)}`}
-            value={method}
-            disabled={methodDisabled}
-            onChange={(event) => onChangeMethod(event.target.value as HttpMethod)}
-            aria-label="HTTP method"
+    <div className="api-request-bar">
+      <div className="api-request-main">
+        <select
+          className={`input api-method-select ${methodClass(method)}`}
+          value={method}
+          disabled={methodDisabled}
+          onChange={(event) => onChangeMethod(event.target.value as HttpMethod)}
+          aria-label="HTTP method"
+        >
+          {METHODS.map((option) => (
+            <option key={option} value={option}>
+              {option}
+            </option>
+          ))}
+        </select>
+
+        <input
+          className="input api-url-input"
+          type="text"
+          value={url}
+          disabled={urlDisabled}
+          onChange={(event) => onChangeUrl(event.target.value)}
+          placeholder="http://localhost:3001/demo-api/health"
+          aria-label="Request URL"
+        />
+
+        <div className="api-send-group" ref={sendMenuRef}>
+          <button
+            type="button"
+            className="button button-primary api-send-button"
+            onClick={() => {
+              setMenuOpen(false);
+              onSend();
+            }}
+            disabled={isSending}
           >
-            {METHODS.map((option) => (
-              <option key={option} value={option}>
-                {option}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <label className="tw-flex tw-flex-col tw-gap-1">
-          <span className="body-small tw-opacity-70">URL</span>
-          <input
-            className="input"
-            type="text"
-            value={url}
-            disabled={urlDisabled}
-            onChange={(event) => onChangeUrl(event.target.value)}
-            placeholder="http://localhost:3001/demo-api/health"
-          />
-        </label>
-
-        <div className="tw-flex tw-flex-wrap tw-gap-2 lg:tw-justify-end">
-          <button type="button" className="button button-primary" onClick={onSend} disabled={isSending}>
             {isSending ? 'Sending...' : 'Send'}
           </button>
-          <button type="button" className="button button-secondary" onClick={onCopyCurl}>
-            Copy cURL
+          <button
+            type="button"
+            className="button button-primary api-send-menu-toggle"
+            aria-label="Open send actions"
+            aria-haspopup="menu"
+            aria-expanded={menuOpen}
+            onClick={() => setMenuOpen((prev) => !prev)}
+          >
+            <ChevronDownIcon size={14} />
           </button>
-          <button type="button" className="button button-tertiary" onClick={onSave}>
-            Save
-          </button>
-          <button type="button" className="button button-text" onClick={onClear}>
-            Clear
-          </button>
+          {menuOpen && (
+            <div className="api-send-menu" role="menu" aria-label="Send actions">
+              <button
+                type="button"
+                className="api-send-menu-item"
+                role="menuitem"
+                onClick={() => {
+                  setMenuOpen(false);
+                  onCopyCurl();
+                }}
+              >
+                Copy cURL
+              </button>
+              <button
+                type="button"
+                className="api-send-menu-item"
+                role="menuitem"
+                onClick={() => {
+                  setMenuOpen(false);
+                  onSave();
+                }}
+              >
+                Save
+              </button>
+              <button
+                type="button"
+                className="api-send-menu-item"
+                role="menuitem"
+                onClick={() => {
+                  setMenuOpen(false);
+                  onClear();
+                }}
+              >
+                New Request
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -1752,7 +2296,7 @@ export function RequestWorkbench({
   };
 
   return (
-    <div className="tw-flex tw-flex-col tw-gap-4 tw-min-w-0">
+    <div className="api-request-workbench">
       <RequestBar
         method={draft.method}
         url={currentUrl}
@@ -1771,7 +2315,7 @@ export function RequestWorkbench({
         onClear={onClear}
       />
       {(!editable.method || !editable.path) && (
-        <div className="body-small tw-text-warning">Some request fields are locked by the selected task.</div>
+        <div className="body-small tw-text-warning api-request-lock-note">Some request fields are locked by the selected task.</div>
       )}
       <EditorTabs activeTab={activeTab} onChange={setActiveTab} sections={sections} />
     </div>
@@ -3940,110 +4484,1326 @@ export interface ProgressState {
 
 
 ===== FILE: client/api-sim.css =====
+/* ================================================================
+   API Simulator – Dark Theme
+   ================================================================ */
+
+/* Step 1: Height chain – ensure full-viewport propagation */
+html, body {
+  height: 100%;
+  margin: 0;
+}
+
+.bespoke {
+  height: 100%;
+  overflow: hidden;
+}
+
 .bespoke .api-sim-root {
-  height: calc(100vh - 42px);
+  height: 100vh;
   display: flex;
+  background: #0b1119;
 }
 
 .bespoke #api-sim-root {
   width: 100%;
+  min-width: 0;
 }
 
+.bespoke .header {
+  display: none;
+}
+
+/* ----------------------------------------------------------------
+   App shell & theme tokens
+   ---------------------------------------------------------------- */
 .bespoke .api-sim-app {
+  --bg-0: #0f1520;
+  --bg-1: #151d2a;
+  --bg-2: #1c2535;
+  --bg-3: #111925;
+  --border: #2e3b51;
+  --border-strong: #395170;
+  --text: #e6edf7;
+  --muted: #9fb0c7;
+  --primary: #2f81f6;
+  --primary-hover: #246fda;
+  --focus: rgba(47, 129, 246, 0.38);
+  --danger: #ff7676;
+
   height: 100%;
-  color: #0f172a;
-  background: #f3f6fb;
+  display: flex;
+  flex-direction: column;
+  background:
+    radial-gradient(1100px 500px at 15% -10%, rgba(47, 129, 246, 0.12), transparent 60%),
+    radial-gradient(900px 420px at 95% 0%, rgba(53, 99, 179, 0.1), transparent 62%),
+    var(--bg-0);
+  color: var(--text);
 }
 
 .bespoke .api-sim-layout {
   display: flex;
-  height: 100%;
+  flex-direction: column;
+  flex: 1;
   width: 100%;
+  min-height: 0;
 }
 
+/* ----------------------------------------------------------------
+   Top navbar – rectangular tab bar, 56px, real-product feel
+   ---------------------------------------------------------------- */
 .bespoke .api-sim-topbar {
-  background: #ffffff;
-  border-bottom: 1px solid var(--Colors-Stroke-Subtle);
+  min-height: 56px;
+  display: flex;
+  align-items: stretch;       /* children stretch full height */
+  justify-content: space-between;
+  gap: 0;
+  padding: 0 20px;            /* flush top/bottom, spacious horizontal */
+  border-bottom: 1px solid var(--border);
+  background: rgba(10, 14, 22, 0.97);
+  backdrop-filter: blur(8px);
+  flex-shrink: 0;
 }
 
-.bespoke .api-sim-nav {
-  width: 220px;
-  border-right: 1px solid var(--Colors-Stroke-Subtle);
+.bespoke .api-sim-brand {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  padding-right: 20px;        /* gap between brand and nav tabs */
+  flex-shrink: 0;
 }
 
-.bespoke .api-sim-layout-sidebar {
-  width: 320px;
-  border-right: 1px solid var(--Colors-Stroke-Subtle);
+.bespoke .api-sim-brand .heading-small {
+  margin: 0;
+  font-size: 13.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text);
+}
+
+.bespoke .api-sim-topbar-controls {
+  width: auto;
+  display: flex;
+  align-items: stretch;       /* tabs stretch full bar height */
+  gap: 8px;
+  min-width: 0;
+  margin-left: auto;
+}
+
+/* Flat tab bar – no pill container, no border, no background */
+.bespoke .api-sim-section-switcher {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  overflow-x: auto;
+  /* Hide scrollbar on switcher itself */
+  scrollbar-width: none;
+}
+
+.bespoke .api-sim-section-switcher::-webkit-scrollbar {
+  display: none;
+}
+
+/* Tab – rectangular, full-height, bottom-border active indicator */
+.bespoke .api-section-tab {
+  border: 0;
+  border-bottom: 2px solid transparent;   /* active underline */
+  border-radius: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 13.5px;
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+  padding: 0 18px;            /* wide horizontal, full height vertically */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: color 0.12s ease, background 0.12s ease, border-color 0.12s ease;
+}
+
+.bespoke .api-section-tab:hover {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+/* Active: blue bottom underline + very subtle fill */
+.bespoke .api-section-tab-active {
+  color: var(--text);
+  background: rgba(47, 129, 246, 0.07);
+  border-bottom-color: var(--primary);
+  font-weight: 600;
+}
+
+/* Help button – rectangular, self-centered in the bar */
+.bespoke .api-help-button {
+  align-self: center;         /* don't stretch full height */
+  min-height: 32px !important;
+  height: 32px;
+  padding: 0 14px !important;
+  font-size: 13px;
+  font-weight: 500;
+  border-radius: 6px !important;          /* rectangular, not pill */
+  border: 1px solid var(--border) !important;
+  color: var(--muted) !important;
+  transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease;
+}
+
+.bespoke .api-help-button:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text) !important;
+  border-color: var(--border-strong) !important;
+}
+
+/* Mobile hamburger menu toggle (hidden on desktop) */
+.bespoke .api-mobile-menu-toggle {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  padding: 6px;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: background 0.12s ease;
+}
+
+.bespoke .api-mobile-menu-toggle:hover {
+  background: #1a2536;
+}
+
+/* Mobile nav overlay */
+.bespoke .api-mobile-nav-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.bespoke .api-mobile-nav-panel {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 240px;
+  height: 100%;
+  background: var(--bg-1);
+  border-left: 1px solid var(--border);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  animation: api-slide-in-right 0.15s ease-out;
+}
+
+@keyframes api-slide-in-right {
+  from { transform: translateX(100%); }
+  to   { transform: translateX(0); }
+}
+
+.bespoke .api-mobile-nav-item {
+  width: 100%;
+  text-align: left;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 600;
+  padding: 10px 12px;
+  cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+
+.bespoke .api-mobile-nav-item:hover {
+  background: #1a2536;
+  color: var(--text);
+}
+
+.bespoke .api-mobile-nav-item-active {
+  background: var(--primary);
+  color: #fff;
 }
 
 .bespoke .api-sim-layout-main {
   flex: 1;
   min-width: 0;
+  min-height: 0;
+  background: transparent;
 }
 
-.bespoke .api-sim-panel,
-.bespoke .api-sim-app .card {
-  border: 1px solid #d8e0ea;
-  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06);
+/* ----------------------------------------------------------------
+   Step 2: Design system conflict overrides
+   ---------------------------------------------------------------- */
+
+/* Override .box default padding & hover/focus states */
+.bespoke .api-sim-app .box {
+  padding: 0;
 }
 
-.bespoke .api-sim-app .body-small,
+.bespoke .api-sim-app .box:hover,
+.bespoke .api-sim-app .box:focus {
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  box-shadow: none;
+}
+
+/* Override label margins from bespoke-template.css */
+.bespoke .api-sim-app label:not(.input-checkbox):not(.input-radio) {
+  margin: 0;
+}
+
+/* Override checkbox for dark theme */
+.bespoke .api-sim-app .input-checkbox-box {
+  background: var(--bg-3);
+  border-color: var(--border);
+}
+
+.bespoke .api-sim-app .input-checkbox input:checked + .input-checkbox-box {
+  background: var(--primary);
+  border-color: var(--primary);
+}
+
+/* Override select dropdown arrow for dark theme */
+.bespoke .api-sim-app select {
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%239fb0c7' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e");
+}
+
+/* Disabled state for dark theme */
+.bespoke .api-sim-app .input:disabled,
+.bespoke .api-sim-app select:disabled,
+.bespoke .api-sim-app textarea:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Explicit body-default definition */
 .bespoke .api-sim-app .body-default {
-  color: #243244;
+  font-family: var(--body-family, "Work Sans", sans-serif);
+  font-size: 16px;
+  line-height: 1.45;
+  color: var(--text);
+}
+
+/* ----------------------------------------------------------------
+   Dark card & theme overrides
+   ---------------------------------------------------------------- */
+.bespoke .api-sim-app .card {
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2), 0 1px 2px rgba(0, 0, 0, 0.12);
+}
+
+.bespoke .api-sim-app .tw-bg-white {
+  background: var(--bg-2) !important;
+}
+
+.bespoke .api-sim-app .tw-border-border {
+  border-color: var(--border);
 }
 
 .bespoke .api-sim-app .heading-small {
-  color: #0f172a;
+  color: var(--text);
 }
 
-.bespoke .api-method-get {
-  color: #166534;
-  background: #ecfdf3;
-  border-color: #9fe6c2;
+.bespoke .api-sim-app .body-small {
+  color: var(--muted);
 }
 
-.bespoke .api-method-post {
-  color: #1d4ed8;
-  background: #eff6ff;
-  border-color: #b9d4ff;
+.bespoke .api-sim-app .input,
+.bespoke .api-sim-app select,
+.bespoke .api-sim-app textarea {
+  background: var(--bg-3);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 8px;
+  min-height: 42px;
 }
 
-.bespoke .api-method-put {
-  color: #92400e;
-  background: #fffbeb;
-  border-color: #f9d38b;
+.bespoke .api-sim-app .input::placeholder,
+.bespoke .api-sim-app textarea::placeholder {
+  color: #7488a4;
 }
 
-.bespoke .api-method-delete {
-  color: #991b1b;
-  background: #fef2f2;
-  border-color: #f6b4b4;
+.bespoke .api-sim-app .button {
+  min-height: 42px;
+  border-radius: 8px;
 }
 
-.bespoke .api-sim-app pre {
+.bespoke .api-sim-app .button.button-primary {
+  background: var(--primary);
+  color: #fff;
+  border-color: transparent;
+}
+
+.bespoke .api-sim-app .button.button-primary:hover {
+  background: var(--primary-hover);
+}
+
+.bespoke .api-sim-app .button.button-secondary,
+.bespoke .api-sim-app .button.button-tertiary,
+.bespoke .api-sim-app .button.button-text {
+  background: transparent;
+  color: var(--muted);
+  border-color: var(--border);
+}
+
+.bespoke .api-sim-app .button.button-text {
+  border-color: transparent;
+}
+
+.bespoke .api-sim-app .button:hover {
+  color: var(--text);
+}
+
+/* Tag variants */
+.bespoke .api-sim-app .tag.tag-neutral {
+  border: 1px solid var(--border);
+  background: #151f2d;
+  color: #b0bfd4;
+}
+
+.bespoke .api-sim-app .tag.tag-positive {
+  background: rgba(68, 177, 118, 0.16);
+  border: 1px solid rgba(84, 197, 133, 0.44);
+  color: #70d89f;
+}
+
+.bespoke .api-sim-app .tag.tag-warning {
+  background: rgba(218, 165, 50, 0.18);
+  border: 1px solid rgba(237, 190, 76, 0.45);
+  color: #f2c96b;
+}
+
+.bespoke .api-sim-app .tag.tag-danger {
+  background: rgba(207, 78, 78, 0.17);
+  border: 1px solid rgba(255, 118, 118, 0.45);
+  color: #ff9898;
+}
+
+/* Focus ring */
+.bespoke .api-sim-app .button:focus-visible,
+.bespoke .api-sim-app .input:focus-visible,
+.bespoke .api-sim-app textarea:focus-visible,
+.bespoke .api-sim-app select:focus-visible,
+.bespoke .api-tab:focus-visible,
+.bespoke .api-history-item:focus-visible,
+.bespoke .api-section-tab:focus-visible,
+.bespoke .api-send-menu-item:focus-visible,
+.bespoke .api-mobile-menu-toggle:focus-visible,
+.bespoke .api-mobile-nav-item:focus-visible,
+.bespoke .api-logs-type-chip:focus-visible,
+.bespoke .api-copy-response-btn:focus-visible,
+.bespoke .api-logs-copy-btn:focus-visible,
+.bespoke .api-history-search:focus-visible,
+.bespoke .api-history-clear-btn:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
+
+/* ----------------------------------------------------------------
+   Custom scrollbar (dark theme)
+   ---------------------------------------------------------------- */
+.bespoke .api-sim-app ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.bespoke .api-sim-app ::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.bespoke .api-sim-app ::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 4px;
+}
+
+.bespoke .api-sim-app ::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* ----------------------------------------------------------------
+   Request workspace layout
+   ---------------------------------------------------------------- */
+.bespoke .api-request-workspace {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  gap: 16px;
+  overflow-y: auto;   /* allow scrolling when response pane is resized tall */
+}
+
+.bespoke .api-request-composer {
+  flex: 1 1 auto;     /* fills remaining space above the response pane */
+  min-height: 300px;
+  min-width: 0;
+}
+
+.bespoke .api-request-workbench {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;
+}
+
+.bespoke .api-request-lock-note {
+  padding: 2px 4px;
+}
+
+/* ----------------------------------------------------------------
+   Request bar
+   ---------------------------------------------------------------- */
+.bespoke .api-request-bar {
+  flex: 0 0 auto;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2), 0 1px 2px rgba(0, 0, 0, 0.12);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.bespoke .api-request-main {
+  display: grid;
+  grid-template-columns: minmax(120px, 15%) minmax(0, 1fr) minmax(160px, 15%);
+  gap: 12px;
+  align-items: stretch;
+  min-width: 0;
+}
+
+.bespoke .api-method-select,
+.bespoke .api-url-input,
+.bespoke .api-send-button,
+.bespoke .api-send-menu-toggle {
+  height: 44px;
+  min-height: 44px;
+}
+
+.bespoke .api-method-select {
+  width: 100%;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  border-width: 1px;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.bespoke .api-sim-app .api-method-select:hover {
+  border-color: var(--border-strong);
+}
+
+/* Method color accents (needs .api-sim-app for specificity over .input rule) */
+.bespoke .api-sim-app .api-method-get {
+  color: #7adbaa;
+  border-color: #305949;
+  background: linear-gradient(90deg, rgba(78, 178, 125, 0.15), rgba(17, 25, 37, 0.92));
+}
+
+.bespoke .api-sim-app .api-method-post {
+  color: #80b8ff;
+  border-color: #2e4f7f;
+  background: linear-gradient(90deg, rgba(74, 132, 226, 0.16), rgba(17, 25, 37, 0.92));
+}
+
+.bespoke .api-sim-app .api-method-put {
+  color: #f0bf79;
+  border-color: #725937;
+  background: linear-gradient(90deg, rgba(193, 136, 46, 0.16), rgba(17, 25, 37, 0.92));
+}
+
+.bespoke .api-sim-app .api-method-patch {
+  color: #bda0ff;
+  border-color: #5a4a82;
+  background: linear-gradient(90deg, rgba(132, 100, 210, 0.16), rgba(17, 25, 37, 0.92));
+}
+
+.bespoke .api-sim-app .api-method-delete {
+  color: #ff9f9f;
+  border-color: #7a4545;
+  background: linear-gradient(90deg, rgba(194, 79, 79, 0.17), rgba(17, 25, 37, 0.92));
+}
+
+.bespoke .api-url-input {
+  width: 100%;
+  min-width: 0;
+}
+
+/* Send button group */
+.bespoke .api-send-group {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 1fr 42px;
+}
+
+.bespoke .api-send-group .button {
+  margin: 0;
+}
+
+.bespoke .api-send-button {
+  width: 100%;
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.bespoke .api-send-menu-toggle {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+  border-left: 1px solid rgba(255, 255, 255, 0.24);
+  padding: 0;
+  justify-content: center;
+}
+
+/* Send dropdown menu */
+.bespoke .api-send-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 40;
+  min-width: 180px;
+  border-radius: 8px;
+  border: 1px solid var(--border-strong);
+  background: #101a28;
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.4);
+  padding: 6px;
+  animation: api-menu-fade-in 0.12s ease-out;
+}
+
+@keyframes api-menu-fade-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.bespoke .api-send-menu-item {
+  width: 100%;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  font-size: 14px;
+  padding: 8px 12px;
+  cursor: pointer;
+  transition: background 0.1s ease;
+}
+
+.bespoke .api-send-menu-item:hover {
+  background: #1e2a3e;
+}
+
+/* ----------------------------------------------------------------
+   Editor panel & tabs
+   ---------------------------------------------------------------- */
+.bespoke .api-editor-panel {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 8px 14px 14px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2), 0 1px 2px rgba(0, 0, 0, 0.12);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.bespoke .api-tab-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  overflow-x: auto;
+  white-space: nowrap;
+  border-bottom: 1px solid var(--border);
+  padding: 4px 0 0;
+}
+
+.bespoke .api-tab {
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  background: transparent;
+  color: var(--muted);
+  padding: 10px 12px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: color 0.12s ease, border-color 0.12s ease;
+}
+
+.bespoke .api-tab:hover {
+  color: var(--text);
+  border-bottom-color: rgba(47, 129, 246, 0.3);
+}
+
+.bespoke .api-tab-active {
+  color: var(--text);
+  border-bottom-color: var(--primary);
+  font-weight: 600;
+}
+
+.bespoke .api-editor-content {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 14px 0 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.bespoke .api-editor-hint,
+.bespoke .api-field-label {
+  color: var(--muted);
+}
+
+/* Key-value editor */
+.bespoke .api-kv-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.bespoke .api-kv-head {
+  display: grid;
+  grid-template-columns: 44px minmax(160px, 1fr) minmax(160px, 1fr) 40px;
+  gap: 8px;
+  align-items: center;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: 11px;
+  color: var(--muted);
+  padding: 0 2px;
+}
+
+.bespoke .api-kv-row {
+  display: grid;
+  grid-template-columns: 44px minmax(160px, 1fr) minmax(160px, 1fr) 40px;
+  gap: 8px;
+  align-items: center;
+}
+
+.bespoke .api-kv-row .input {
+  width: 100%;
+}
+
+.bespoke .api-kv-remove {
+  color: var(--danger);
+  font-size: 18px;
+  min-width: 38px;
+}
+
+.bespoke .api-add-row-button {
+  color: #9ac5ff;
+}
+
+/* Auth editor */
+.bespoke .api-auth-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Body editor */
+.bespoke .api-body-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;
+  flex: 1;
+}
+
+.bespoke .api-body-mode-row {
+  padding-top: 0;
+}
+
+.bespoke .api-body-beautify {
+  margin-left: auto;
+  height: 34px;
+  min-height: 34px;
+}
+
+/* Use .api-sim-app to beat design system's .api-sim-app textarea specificity */
+.bespoke .api-sim-app .api-body-textarea {
+  flex: 1;
+  min-height: 180px;
+  max-height: 500px;
+  width: 100%;
+  resize: vertical;
+  font-family: "JetBrains Mono", "SFMono-Regular", Menlo, Consolas, monospace;
+  font-size: 13px;
+  line-height: 1.5;
+  padding: 12px;
+}
+
+/* Body NONE empty state */
+.bespoke .api-body-none-hint {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  min-height: 80px;
+  color: var(--muted);
+  font-size: 13px;
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  background: rgba(17, 25, 37, 0.4);
+  padding: 16px;
+  text-align: center;
+}
+
+/* ----------------------------------------------------------------
+   Response pane
+   ---------------------------------------------------------------- */
+/* Response pane – user-resizable vertically */
+.bespoke .api-response-pane-wrap {
+  flex: 0 0 auto;                          /* fixed size; composer fills remaining space */
+  height: clamp(260px, 36vh, 500px);       /* good default – user can drag to resize */
+  min-height: 200px;
+  min-width: 0;
+  overflow: hidden;                        /* required for resize: vertical to work */
+  resize: vertical;
+}
+
+.bespoke .api-response-pane {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 14px 14px;
+  gap: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2), 0 1px 2px rgba(0, 0, 0, 0.12);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.bespoke .api-response-pane-error {
+  background: rgba(125, 40, 49, 0.22);
+  border-color: rgba(255, 113, 113, 0.44);
+}
+
+.bespoke .api-response-empty {
+  justify-content: center;
+  align-items: center;
+}
+
+.bespoke .api-response-empty .heading-small {
+  color: var(--muted);
+}
+
+/* Empty state hint */
+.bespoke .api-response-empty-hint {
+  text-align: center;
+  max-width: 280px;
+}
+
+.bespoke .api-response-empty-hint p {
+  margin: 0;
+}
+
+.bespoke .api-response-empty-hint p + p {
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+/* Copy response button */
+.bespoke .api-copy-response-btn {
+  display: inline-flex !important;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px !important;
+  height: 32px;
+  padding: 0 10px !important;
+  font-size: 12.5px;
+  border: 1px solid var(--border) !important;
+  border-radius: 6px !important;
+}
+
+.bespoke .api-copy-response-btn:hover {
+  background: #1a2536;
+  border-color: var(--border-strong) !important;
+}
+
+.bespoke .api-response-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  background: #162033;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 12px;
+}
+
+.bespoke .api-response-tabs {
+  margin-top: 2px;
+}
+
+.bespoke .api-response-viewer {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
+.bespoke .api-response-code,
+.bespoke .api-response-headers {
+  height: 100%;
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-3);
+  color: var(--text);
+  padding: 12px;
+}
+
+.bespoke .api-response-code {
+  margin: 0;
+  font-family: "JetBrains Mono", "SFMono-Regular", Menlo, Consolas, monospace;
+  font-size: 13px;
+  line-height: 1.5;
   white-space: pre-wrap;
   word-break: break-word;
+  resize: vertical;
+  min-height: 120px;
 }
 
+.bespoke .api-response-headers {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* ----------------------------------------------------------------
+   History drawer (improved – larger items, search, icons)
+   ---------------------------------------------------------------- */
+.bespoke .api-history-drawer {
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.bespoke .api-history-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 12px;
+}
+
+.bespoke .api-history-header-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.bespoke .api-history-controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.bespoke .api-history-clear-btn {
+  min-height: 28px !important;
+  height: 28px;
+  padding: 0 6px !important;
+  color: var(--muted) !important;
+  transition: color 0.12s ease;
+}
+
+.bespoke .api-history-clear-btn:hover {
+  color: var(--danger) !important;
+}
+
+.bespoke .api-history-content {
+  border-top: 1px solid var(--border);
+  padding: 12px;
+  max-height: min(55vh, 640px);   /* expands to use available vertical space */
+  overflow: auto;
+}
+
+/* History search input */
+.bespoke .api-history-search {
+  min-height: 34px !important;
+  height: 34px;
+  font-size: 12.5px;
+  border-radius: 6px;
+  width: 100%;
+  margin-bottom: 8px;
+}
+
+/* History item – grid layout for better scan-ability */
+.bespoke .api-history-item {
+  width: 100%;
+  text-align: left;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px 14px;    /* more breathing room – easier to scan and click */
+  background: #151f2e;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 4px 10px;
+  align-items: center;
+}
+
+.bespoke .api-history-item:hover {
+  background: #1a2940;
+  border-color: #436088;
+}
+
+/* Second row meta (status + duration) */
+.bespoke .api-history-item-meta {
+  grid-column: 2 / 3;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Method dot (history entries) */
+.bespoke .api-method-dot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 54px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.bespoke .api-method-dot.api-method-get {
+  background-color: rgba(63, 142, 100, 0.16);
+}
+
+.bespoke .api-method-dot.api-method-post {
+  background-color: rgba(67, 118, 199, 0.18);
+}
+
+.bespoke .api-method-dot.api-method-put {
+  background-color: rgba(174, 130, 62, 0.18);
+}
+
+.bespoke .api-method-dot.api-method-patch {
+  background-color: rgba(125, 97, 196, 0.2);
+}
+
+.bespoke .api-method-dot.api-method-delete {
+  background-color: rgba(166, 69, 69, 0.18);
+}
+
+/* Pre tags */
+.bespoke .api-sim-app pre {
+  margin: 0;
+}
+
+/* ----------------------------------------------------------------
+   Logs section
+   ---------------------------------------------------------------- */
+.bespoke .api-logs-section {
+  height: 100%;
+}
+
+.bespoke .api-logs-filter-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 12px;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  flex-wrap: wrap;
+}
+
+.bespoke .api-logs-type-chip {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 10px;
+  cursor: pointer;
+  transition: all 0.12s ease;
+  white-space: nowrap;
+}
+
+.bespoke .api-logs-type-chip:hover {
+  background: #1a2536;
+  color: var(--text);
+}
+
+.bespoke .api-logs-type-chip-active {
+  background: rgba(47, 129, 246, 0.15);
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.bespoke .api-logs-list {
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: auto;
+}
+
+.bespoke .api-logs-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.bespoke .api-logs-table thead th {
+  position: sticky;
+  top: 0;
+  background: var(--bg-1);
+  padding: 10px 12px;
+  text-align: left;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  border-bottom: 1px solid var(--border);
+}
+
+.bespoke .api-logs-row {
+  cursor: pointer;
+  transition: background 0.1s ease;
+}
+
+.bespoke .api-logs-row:hover {
+  background: #1a2940;
+}
+
+.bespoke .api-logs-row-expanded {
+  background: #1a2940;
+}
+
+.bespoke .api-logs-row td {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+
+.bespoke .api-logs-cell-time {
+  font-family: "JetBrains Mono", "SFMono-Regular", Menlo, Consolas, monospace;
+  font-size: 12px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.bespoke .api-logs-event-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: "JetBrains Mono", monospace;
+  background: rgba(47, 129, 246, 0.1);
+  color: #80b8ff;
+}
+
+.bespoke .api-logs-event-error {
+  background: rgba(207, 78, 78, 0.17);
+  color: #ff9898;
+}
+
+.bespoke .api-logs-copy-btn {
+  min-height: 28px !important;
+  height: 28px;
+  padding: 0 6px !important;
+  display: inline-flex !important;
+  align-items: center;
+}
+
+.bespoke .api-logs-payload-row td {
+  padding: 0 12px 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.bespoke .api-logs-payload-code {
+  margin: 0;
+  padding: 12px;
+  font-family: "JetBrains Mono", "SFMono-Regular", Menlo, Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  background: var(--bg-3);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  white-space: pre-wrap;
+  word-break: break-word;
+  min-height: 80px;
+  max-height: 400px;
+  overflow: auto;
+  resize: vertical;
+}
+
+/* ----------------------------------------------------------------
+   Responsive – Tablet (≤ 1024px)
+   ---------------------------------------------------------------- */
 @media (max-width: 1024px) {
-  .bespoke .api-sim-app {
-    height: 100%;
+  .bespoke .api-sim-topbar,
+  .bespoke .api-sim-topbar-controls {
+    justify-content: flex-start;
   }
 
-  .bespoke .api-sim-layout {
-    flex-direction: column;
+  .bespoke .api-request-composer {
+    flex: 0 0 auto;
+    min-height: 0;
   }
 
-  .bespoke .api-sim-nav {
+  .bespoke .api-response-pane-wrap {
+    height: clamp(200px, 32vh, 440px);
+    min-height: 160px;
+  }
+
+  .bespoke .api-request-main {
+    grid-template-columns: minmax(112px, 34%) minmax(0, 1fr);
+    gap: 10px;
+  }
+
+  .bespoke .api-send-group {
+    grid-column: 1 / -1;
+  }
+
+  .bespoke .api-send-button {
     width: 100%;
-    border-right: 0;
-    border-bottom: 1px solid var(--Colors-Stroke-Subtle);
   }
 
-  .bespoke .api-sim-layout-sidebar {
-    width: 100%;
-    border-right: 0;
-    border-bottom: 1px solid var(--Colors-Stroke-Subtle);
+  .bespoke .api-kv-head {
+    display: none;
+  }
+
+  .bespoke .api-kv-row {
+    grid-template-columns: auto 1fr;
+    grid-template-areas:
+      "toggle remove"
+      "key key"
+      "value value";
+    gap: 8px;
+  }
+
+  .bespoke .api-kv-row > label {
+    grid-area: toggle;
+  }
+
+  .bespoke .api-kv-row > input:nth-of-type(1) {
+    grid-area: key;
+  }
+
+  .bespoke .api-kv-row > input:nth-of-type(2) {
+    grid-area: value;
+  }
+
+  .bespoke .api-kv-remove {
+    grid-area: remove;
+    justify-self: end;
+  }
+}
+
+/* Logs table horizontal scroll on narrower screens */
+@media (max-width: 768px) {
+  .bespoke .api-logs-table {
+    min-width: 600px;
+  }
+}
+
+/* ----------------------------------------------------------------
+   Responsive – Mobile (≤ 640px)
+   ---------------------------------------------------------------- */
+@media (max-width: 640px) {
+  .bespoke .api-sim-root {
+    height: 100vh;
+  }
+
+  .bespoke .api-sim-topbar {
+    min-height: 0;
+    flex-wrap: wrap;
+    padding: 8px 12px;
+  }
+
+  .bespoke .api-sim-layout-main {
+    padding: 12px;
+  }
+
+  /* Hide desktop switcher, show hamburger */
+  .bespoke .api-sim-section-switcher {
+    display: none;
+  }
+
+  .bespoke .api-mobile-menu-toggle {
+    display: flex;
+  }
+
+  .bespoke .api-mobile-nav-overlay.api-mobile-nav-open {
+    display: block;
+  }
+
+  .bespoke .api-sim-topbar-controls {
+    width: auto;
+    justify-content: flex-end;
+    gap: 8px;
+  }
+
+  .bespoke .api-request-workspace {
+    gap: 10px;
+  }
+
+  .bespoke .api-request-bar,
+  .bespoke .api-editor-panel,
+  .bespoke .api-response-pane,
+  .bespoke .api-history-drawer {
+    border-radius: 8px;
+  }
+
+  .bespoke .api-request-main {
+    grid-template-columns: 1fr;
+  }
+
+  .bespoke .api-method-select,
+  .bespoke .api-url-input,
+  .bespoke .api-send-group {
+    grid-column: 1 / -1;
+  }
+
+  .bespoke .api-sim-app .api-body-textarea {
+    min-height: 160px;
+  }
+
+  /* Logs adjustments */
+  .bespoke .api-logs-filter-bar {
+    padding: 8px;
+  }
+
+  .bespoke .api-logs-type-chip {
+    font-size: 10px;
+    padding: 3px 8px;
+  }
+}
+
+/* ----------------------------------------------------------------
+   Responsive – Narrow mobile (≤ 400px)
+   ---------------------------------------------------------------- */
+@media (max-width: 400px) {
+  .bespoke .api-sim-brand .heading-small {
+    font-size: 13px;
+  }
+
+  .bespoke .api-sim-topbar {
+    padding: 6px 10px;
   }
 }
 
@@ -4054,6 +5814,21 @@ import Modal from './design-system/components/modal/modal.js';
 
 let websocket = null;
 let helpModal = null;
+let helpModalInitialized = false;
+
+function closeUnexpectedOpenModals() {
+  const overlays = document.querySelectorAll('.modal-overlay.open');
+  if (overlays.length === 0) {
+    return;
+  }
+  overlays.forEach((overlay) => {
+    overlay.classList.remove('open');
+    overlay.setAttribute('aria-hidden', 'true');
+  });
+  document.body.style.overflow = '';
+  document.body.style.paddingRight = '';
+  console.warn('[help-modal] Closed unexpected open modal overlay on startup');
+}
 
 // Initialize WebSocket connection
 function initializeWebSocket() {
@@ -4096,33 +5871,54 @@ function initializeWebSocket() {
   }
 }
 
-// Load help content and initialize modal
-async function initializeHelpModal() {
+async function loadHelpContentNode() {
   try {
     const response = await fetch('./help-content.html');
-    const helpContent = await response.text();
-
-    helpModal = Modal.createHelpModal({
-      title: 'Help / User Guide',
-      content: helpContent
-    });
-
-    const helpButton = document.getElementById('btn-help');
-    if (helpButton) {
-      helpButton.addEventListener('click', () => {
-        helpModal.open();
-      });
+    if (!response.ok) {
+      throw new Error(`Failed to load help content (${response.status})`);
     }
+    const helpContent = await response.text();
+    const template = document.createElement('template');
+    template.innerHTML = helpContent;
+    return template.content.cloneNode(true);
   } catch (error) {
     console.error('Failed to load help content:', error);
+    const fallback = document.createElement('div');
+    fallback.innerHTML = '<p>Help content could not be loaded. Please check that help-content.html exists.</p>';
+    return fallback;
+  }
+}
+
+// Load help content and initialize modal
+async function initializeHelpModal() {
+  if (helpModalInitialized) {
+    closeUnexpectedOpenModals();
+    return;
+  }
+  helpModalInitialized = true;
+  try {
+    const contentNode = await loadHelpContentNode();
     helpModal = Modal.createHelpModal({
       title: 'Help / User Guide',
-      content: '<p>Help content could not be loaded. Please check that help-content.html exists.</p>'
+      content: contentNode
     });
+
     const helpButton = document.getElementById('btn-help');
     if (helpButton) {
-      helpButton.addEventListener('click', () => helpModal.open());
+      helpButton.onclick = () => {
+        if (!helpModal) {
+          return;
+        }
+        helpModal.open();
+      };
     }
+  } catch (error) {
+    console.error('Failed to initialize help modal:', error);
+  } finally {
+    if (helpModal && helpModal.isOpen) {
+      helpModal.close();
+    }
+    closeUnexpectedOpenModals();
   }
 }
 
@@ -4299,508 +6095,636 @@ if (document.readyState === 'loading') {
 
 
 ===== FILE: server.js =====
+/**
+ * server.js (drop-in replacement)
+ * - Keeps existing behavior: static dist hosting (prod), demo API, events/progress logging, optional WS
+ * - Adds /api/proxy (GET + POST/PUT/PATCH/DELETE) to allow browser UI to reach sidecars safely
+ *
+ * Usage from frontend:
+ *   POST /api/proxy
+ *   {
+ *     "url": "http://localhost:3001/users",
+ *     "method": "GET",
+ *     "headers": {"Authorization":"Bearer ..."},
+ *     "body": "{\"x\":1}" // or object, or null
+ *   }
+ *
+ * Or simple GET proxy:
+ *   GET /api/proxy?url=http%3A%2F%2Flocalhost%3A3001%2Fusers
+ */
 const http = require('http');
 const fs = require('fs');
 const fsp = fs.promises;
 const path = require('path');
 const url = require('url');
-
 // Try to load WebSocket module, fallback if not available
 let WebSocket = null;
 let isWebSocketAvailable = false;
 try {
-  WebSocket = require('ws');
-  isWebSocketAvailable = true;
-  console.log('WebSocket support enabled');
+WebSocket = require('ws');
+isWebSocketAvailable = true;
+console.log('WebSocket support enabled');
 } catch (error) {
-  console.log('WebSocket support disabled (ws package not installed)');
-  console.log('Install with: npm install ws');
+console.log('WebSocket support disabled (ws package not installed)');
+console.log('Install with: npm install ws');
 }
-
 const DIST_DIR = path.join(__dirname, 'dist');
 const DATA_DIR = path.join(__dirname, '.api-sim-data');
 const EVENTS_FILE = path.join(DATA_DIR, 'events.jsonl');
 const PROGRESS_FILE = path.join(DATA_DIR, 'progress.json');
-// Check if IS_PRODUCTION is set to true
 const isProduction = process.env.IS_PRODUCTION === 'true';
-// In production mode, dist directory must exist
 if (isProduction && !fs.existsSync(DIST_DIR)) {
-  throw new Error(`Production mode enabled but dist directory does not exist: ${DIST_DIR}`);
+throw new Error(`Production mode enabled but dist directory does not exist: ${DIST_DIR}`);
 }
-// Force port 3000 in production, otherwise use PORT environment variable or default to 3000
+// Force port 3000 in production, otherwise use PORT env or default to 3000
 const PORT = isProduction ? 3000 : (process.env.PORT || 3000);
-
 if (!fs.existsSync(DATA_DIR)) {
-  fs.mkdirSync(DATA_DIR, { recursive: true });
+fs.mkdirSync(DATA_DIR, { recursive: true });
 }
-
 // Track connected WebSocket clients
 const wsClients = new Set();
+// Demo API state
 const demoUsers = [];
 let nextDemoUserId = 1;
-
-// MIME types for different file extensions
+// MIME types
 const mimeTypes = {
-  '.html': 'text/html',
-  '.js': 'text/javascript',
-  '.css': 'text/css',
-  '.json': 'application/json',
-  '.png': 'image/png',
-  '.jpg': 'image/jpeg',
-  '.jpeg': 'image/jpeg',
-  '.gif': 'image/gif',
-  '.svg': 'image/svg+xml',
-  '.ico': 'image/x-icon',
-  '.woff': 'font/woff',
-  '.woff2': 'font/woff2',
-  '.ttf': 'font/ttf',
-  '.eot': 'application/vnd.ms-fontobject'
+'.html': 'text/html',
+'.js': 'text/javascript',
+'.css': 'text/css',
+'.json': 'application/json',
+'.png': 'image/png',
+'.jpg': 'image/jpeg',
+'.jpeg': 'image/jpeg',
+'.gif': 'image/gif',
+'.svg': 'image/svg+xml',
+'.ico': 'image/x-icon',
+'.woff': 'font/woff',
+'.woff2': 'font/woff2',
+'.ttf': 'font/ttf',
+'.eot': 'application/vnd.ms-fontobject'
 };
-
-// Get MIME type based on file extension
 function getMimeType(filePath) {
-  const ext = path.extname(filePath).toLowerCase();
-  return mimeTypes[ext] || 'text/plain';
+const ext = path.extname(filePath).toLowerCase();
+return mimeTypes[ext] || 'text/plain';
 }
-
-// Serve static files
 function serveFile(filePath, res) {
-  fs.readFile(filePath, (err, data) => {
-    if (err) {
-      res.writeHead(404, { 'Content-Type': 'text/plain' });
-      res.end('File not found');
-      return;
+fs.readFile(filePath, (err, data) => {
+if (err) {
+res.writeHead(404, { 'Content-Type': 'text/plain' });
+res.end('File not found');
+return;
     }
-
-    const mimeType = getMimeType(filePath);
-    res.writeHead(200, { 'Content-Type': mimeType });
-    res.end(data);
+const mimeType = getMimeType(filePath);
+res.writeHead(200, { 'Content-Type': mimeType });
+res.end(data);
   });
 }
-
 function sendJson(res, statusCode, payload) {
-  res.writeHead(statusCode, { 'Content-Type': 'application/json' });
-  if (statusCode === 204) {
-    res.end();
-    return;
+res.writeHead(statusCode, { 'Content-Type': 'application/json' });
+if (statusCode === 204) {
+res.end();
+return;
   }
-  res.end(JSON.stringify(payload));
+res.end(JSON.stringify(payload));
 }
-
 function readRequestBody(req) {
-  return new Promise((resolve, reject) => {
-    let body = '';
-    req.on('data', chunk => {
-      body += chunk.toString();
-      // prevent extremely large payloads
-      if (body.length > 5 * 1024 * 1024) {
-        req.destroy();
-        reject(new Error('Payload too large'));
+return new Promise((resolve, reject) => {
+let body = '';
+req.on('data', (chunk) => {
+body += chunk.toString();
+if (body.length > 5 * 1024 * 1024) {
+req.destroy();
+reject(new Error('Payload too large'));
       }
     });
-    req.on('end', () => resolve(body));
-    req.on('error', reject);
+req.on('end', () => resolve(body));
+req.on('error', reject);
   });
 }
-
+/**
+ * =========================
+ * WebSocket message endpoint
+ * =========================
+ */
 async function handleMessagePost(req, res) {
-  try {
-    const body = await readRequestBody(req);
-    const data = JSON.parse(body);
-    const message = data.message;
-
-    if (!message) {
-      sendJson(res, 400, { error: 'Message is required' });
-      return;
+try {
+const body = await readRequestBody(req);
+const data = JSON.parse(body);
+const message = data.message;
+if (!message) {
+sendJson(res, 400, { error: 'Message is required' });
+return;
     }
-
-    if (!isWebSocketAvailable) {
-      sendJson(res, 503, {
-        error: 'WebSocket functionality not available',
-        details: 'Install the ws package with: npm install ws'
+if (!isWebSocketAvailable) {
+sendJson(res, 503, {
+error: 'WebSocket functionality not available',
+details: 'Install the ws package with: npm install ws'
       });
-      return;
+return;
     }
-
-    wsClients.forEach(client => {
-      if (client.readyState === WebSocket.OPEN) {
-        client.send(JSON.stringify({ type: 'message', message }));
+wsClients.forEach((client) => {
+if (client.readyState === WebSocket.OPEN) {
+client.send(JSON.stringify({ type: 'message', message }));
       }
     });
-
-    sendJson(res, 200, { success: true, clientCount: wsClients.size });
+sendJson(res, 200, { success: true, clientCount: wsClients.size });
   } catch (error) {
-    sendJson(res, 400, { error: 'Invalid JSON' });
+sendJson(res, 400, { error: 'Invalid JSON' });
   }
 }
-
+/**
+ * ==========
+ * Event logs
+ * ==========
+ */
 function isValidEvent(event) {
-  const eventType = typeof event.eventType === 'string' ? event.eventType : event.type;
-  return event && typeof event === 'object' &&
-    typeof eventType === 'string' &&
-    typeof event.timestamp === 'string' &&
-    typeof event.sessionId === 'string' &&
-    typeof event.taskId === 'string';
+const eventType = typeof event.eventType === 'string' ? event.eventType : event.type;
+return (
+event &&
+typeof event === 'object' &&
+typeof eventType === 'string' &&
+typeof event.timestamp === 'string' &&
+typeof event.sessionId === 'string' &&
+typeof event.taskId === 'string'
+  );
 }
-
 async function appendEvent(event) {
-  await fsp.appendFile(EVENTS_FILE, `${JSON.stringify(event)}\n`, 'utf-8');
+await fsp.appendFile(EVENTS_FILE, `${JSON.stringify(event)}\n`, 'utf-8');
 }
-
 async function handleEventsPost(req, res) {
-  try {
-    const body = await readRequestBody(req);
-    const event = JSON.parse(body);
-    if (!isValidEvent(event)) {
-      sendJson(res, 400, { error: 'Invalid event payload' });
-      return;
+try {
+const body = await readRequestBody(req);
+const event = JSON.parse(body);
+if (!isValidEvent(event)) {
+sendJson(res, 400, { error: 'Invalid event payload' });
+return;
     }
-    if (typeof event.eventType !== 'string' && typeof event.type === 'string') {
-      event.eventType = event.type;
-      delete event.type;
+if (typeof event.eventType !== 'string' && typeof event.type === 'string') {
+event.eventType = event.type;
+delete event.type;
     }
-    await appendEvent(event);
-    sendJson(res, 204, {});
+await appendEvent(event);
+sendJson(res, 204, {});
   } catch (error) {
-    sendJson(res, 400, { error: 'Invalid JSON' });
+sendJson(res, 400, { error: 'Invalid JSON' });
   }
 }
-
 async function readEvents(limit) {
-  try {
-    const data = await fsp.readFile(EVENTS_FILE, 'utf-8');
-    const lines = data.split('\n').filter(Boolean);
-    const slice = lines.slice(-limit);
-    return slice
-      .map(line => {
-        try {
-          return JSON.parse(line);
+try {
+const data = await fsp.readFile(EVENTS_FILE, 'utf-8');
+const lines = data.split('\n').filter(Boolean);
+const slice = lines.slice(-limit);
+return slice
+      .map((line) => {
+try {
+return JSON.parse(line);
         } catch (_) {
-          return null;
+return null;
         }
       })
       .filter(Boolean);
   } catch (error) {
-    if (error.code === 'ENOENT') {
-      return [];
-    }
-    throw error;
+if (error.code === 'ENOENT') return [];
+throw error;
   }
 }
-
 async function handleEventsGet(req, res, parsedUrl) {
-  const limitParam = parsedUrl.query.limit;
-  const limit = Math.min(Math.max(parseInt(limitParam, 10) || 50, 1), 500);
-  try {
-    const events = await readEvents(limit);
-    sendJson(res, 200, events);
+const limitParam = parsedUrl.query.limit;
+const limit = Math.min(Math.max(parseInt(limitParam, 10) || 50, 1), 500);
+try {
+const events = await readEvents(limit);
+sendJson(res, 200, events);
   } catch (error) {
-    console.error('Failed to read events', error);
-    sendJson(res, 500, { error: 'Failed to read events' });
+console.error('Failed to read events', error);
+sendJson(res, 500, { error: 'Failed to read events' });
   }
 }
-
+/**
+ * =========
+ * Progress
+ * =========
+ */
 function isValidProgress(progress) {
-  return progress && typeof progress === 'object' &&
-    typeof progress.taskId === 'string' &&
-    typeof progress.sessionId === 'string' &&
-    Array.isArray(progress.completedStepIds) &&
+return (
+progress &&
+typeof progress === 'object' &&
+typeof progress.taskId === 'string' &&
+typeof progress.sessionId === 'string' &&
+Array.isArray(progress.completedStepIds) &&
     (progress.lastSelectedStepId === null || typeof progress.lastSelectedStepId === 'string') &&
-    typeof progress.updatedAt === 'string';
+typeof progress.updatedAt === 'string'
+  );
 }
-
 async function writeProgress(progress) {
-  const tempFile = `${PROGRESS_FILE}.tmp`;
-  await fsp.writeFile(tempFile, JSON.stringify(progress, null, 2), 'utf-8');
-  await fsp.rename(tempFile, PROGRESS_FILE);
+const tempFile = `${PROGRESS_FILE}.tmp`;
+await fsp.writeFile(tempFile, JSON.stringify(progress, null, 2), 'utf-8');
+await fsp.rename(tempFile, PROGRESS_FILE);
 }
-
 async function handleProgressPost(req, res) {
-  try {
-    const body = await readRequestBody(req);
-    const progress = JSON.parse(body);
-    if (!isValidProgress(progress)) {
-      sendJson(res, 400, { error: 'Invalid progress payload' });
-      return;
+try {
+const body = await readRequestBody(req);
+const progress = JSON.parse(body);
+if (!isValidProgress(progress)) {
+sendJson(res, 400, { error: 'Invalid progress payload' });
+return;
     }
-    await writeProgress(progress);
-    sendJson(res, 204, {});
+await writeProgress(progress);
+sendJson(res, 204, {});
   } catch (error) {
-    sendJson(res, 400, { error: 'Invalid JSON' });
+sendJson(res, 400, { error: 'Invalid JSON' });
   }
 }
-
 async function handleProgressGet(res) {
-  try {
-    const data = await fsp.readFile(PROGRESS_FILE, 'utf-8');
-    sendJson(res, 200, JSON.parse(data));
+try {
+const data = await fsp.readFile(PROGRESS_FILE, 'utf-8');
+sendJson(res, 200, JSON.parse(data));
   } catch (error) {
-    if (error.code === 'ENOENT') {
-      sendJson(res, 404, { error: 'Progress not found' });
-      return;
+if (error.code === 'ENOENT') {
+sendJson(res, 404, { error: 'Progress not found' });
+return;
     }
-    console.error('Failed to read progress file', error);
-    sendJson(res, 500, { error: 'Failed to read progress' });
+console.error('Failed to read progress file', error);
+sendJson(res, 500, { error: 'Failed to read progress' });
   }
 }
-
 async function handleReset(res) {
-  try {
-    await Promise.all([
-      fsp.rm(EVENTS_FILE, { force: true }),
-      fsp.rm(PROGRESS_FILE, { force: true })
+try {
+await Promise.all([
+fsp.rm(EVENTS_FILE, { force: true }),
+fsp.rm(PROGRESS_FILE, { force: true })
     ]);
-    sendJson(res, 204, {});
+sendJson(res, 204, {});
   } catch (error) {
-    sendJson(res, 500, { error: 'Failed to reset data' });
+sendJson(res, 500, { error: 'Failed to reset data' });
   }
 }
-
-function routeApiRequest(req, res, parsedUrl) {
-  if (req.method === 'GET') {
-    if (parsedUrl.pathname === '/api/events') {
-      void handleEventsGet(req, res, parsedUrl);
-      return true;
+/**
+ * ===========================
+ * Sidecar proxy (/api/proxy)
+ * ===========================
+ *
+ * Why this exists:
+ * - Browser in CodeSignal preview cannot reach container localhost/sidecars directly.
+ * - This endpoint runs inside the container, so it CAN reach sidecars (localhost:3001 or service-name:3001).
+ *
+ * Security:
+ * - This version is allowlisted to local hosts + port 3001 by default.
+ * - You can expand allowed hosts/ports safely later.
+ */
+const DEFAULT_ALLOWED_HOSTS = new Set([
+'localhost',
+'127.0.0.1',
+// include common docker name "reading-tracker" (optional)
+'reading-tracker'
+]);
+const DEFAULT_ALLOWED_PORTS = new Set([
+'3001'
+]);
+function normalizeHeaders(input) {
+const out = {};
+if (!input || typeof input !== 'object') return out;
+for (const [k, v] of Object.entries(input)) {
+if (typeof k !== 'string') continue;
+// ignore undefined/null
+if (v === undefined || v === null) continue;
+out[k] = String(v);
+  }
+return out;
+}
+function shouldAllowTarget(targetUrl) {
+try {
+const u = new URL(targetUrl);
+const hostOk = DEFAULT_ALLOWED_HOSTS.has(u.hostname);
+const port = u.port || (u.protocol === 'https:' ? '443' : '80');
+const portOk = DEFAULT_ALLOWED_PORTS.has(port);
+// only http(s)
+const protoOk = u.protocol === 'http:' || u.protocol === 'https:';
+return protoOk && hostOk && portOk;
+  } catch (_) {
+return false;
+  }
+}
+async function handleProxy(req, res, parsedUrl) {
+try {
+let targetUrl = '';
+let method = req.method || 'GET';
+let headers = {};
+let body = null;
+if (req.method === 'GET') {
+// GET /api/proxy?url=...
+const q = parsedUrl.query.url;
+if (typeof q !== 'string' || !q) {
+sendJson(res, 400, { error: 'Missing url query param' });
+return;
+      }
+targetUrl = q;
+    } else {
+// POST/PUT/PATCH/DELETE /api/proxy
+const bodyText = await readRequestBody(req);
+const payload = JSON.parse(bodyText || '{}');
+targetUrl = payload.url;
+method = (payload.method || req.method || 'GET').toUpperCase();
+headers = normalizeHeaders(payload.headers);
+body = payload.body ?? null;
     }
-    if (parsedUrl.pathname === '/api/progress') {
-      void handleProgressGet(res);
-      return true;
+if (typeof targetUrl !== 'string' || !targetUrl) {
+sendJson(res, 400, { error: 'url is required' });
+return;
+    }
+if (!shouldAllowTarget(targetUrl)) {
+sendJson(res, 403, {
+error: 'Target not allowed',
+details: 'Only local sidecar hosts on port 3001 are allowed by default.',
+target: targetUrl
+      });
+return;
+    }
+// Ensure method is one of supported ones
+const allowedMethods = new Set(['GET', 'POST', 'PUT', 'PATCH', 'DELETE']);
+if (!allowedMethods.has(method)) {
+sendJson(res, 400, { error: `Unsupported method: ${method}` });
+return;
+    }
+// Prepare body
+let outgoingBody = undefined;
+if (method !== 'GET' && method !== 'DELETE' && body != null) {
+if (typeof body === 'string') {
+outgoingBody = body;
+      } else {
+// If body is object/array, send JSON
+outgoingBody = JSON.stringify(body);
+if (!headers['Content-Type'] && !headers['content-type']) {
+headers['Content-Type'] = 'application/json';
+        }
+      }
+    }
+// Timeout to avoid hanging
+const controller = new AbortController();
+const timeout = setTimeout(() => controller.abort(), 12000);
+const resp = await fetch(targetUrl, {
+method,
+headers,
+body: outgoingBody,
+signal: controller.signal
+    }).finally(() => clearTimeout(timeout));
+const respContentType = resp.headers.get('content-type') || 'text/plain';
+const respText = await resp.text();
+// Forward response as-is
+res.writeHead(resp.status, {
+'Content-Type': respContentType,
+// helpful for debugging
+'X-Proxy-Target': targetUrl
+    });
+res.end(respText);
+  } catch (e) {
+sendJson(res, 500, { error: 'Proxy failed', details: String(e && e.message ? e.message : e) });
+  }
+}
+/**
+ * ============
+ * API routing
+ * ============
+ */
+function routeApiRequest(req, res, parsedUrl) {
+// proxy supports GET and POST/PUT/PATCH/DELETE (all via /api/proxy)
+if (parsedUrl.pathname === '/api/proxy') {
+void handleProxy(req, res, parsedUrl);
+return true;
+  }
+if (req.method === 'GET') {
+if (parsedUrl.pathname === '/api/events') {
+void handleEventsGet(req, res, parsedUrl);
+return true;
+    }
+if (parsedUrl.pathname === '/api/progress') {
+void handleProgressGet(res);
+return true;
     }
   } else if (req.method === 'POST') {
-    if (parsedUrl.pathname === '/api/events') {
-      void handleEventsPost(req, res);
-      return true;
+if (parsedUrl.pathname === '/api/events') {
+void handleEventsPost(req, res);
+return true;
     }
-    if (parsedUrl.pathname === '/api/progress') {
-      void handleProgressPost(req, res);
-      return true;
+if (parsedUrl.pathname === '/api/progress') {
+void handleProgressPost(req, res);
+return true;
     }
-    if (!isProduction && parsedUrl.pathname === '/api/reset') {
-      void handleReset(res);
-      return true;
+if (!isProduction && parsedUrl.pathname === '/api/reset') {
+void handleReset(res);
+return true;
     }
   }
-  return false;
+return false;
 }
-
+/**
+ * ==========
+ * Demo API
+ * ==========
+ */
 async function routeDemoRequest(req, res, parsedUrl) {
-  const pathname = parsedUrl.pathname;
-  const isDemoApi = pathname.startsWith('/demo-api');
-  const isDemo = pathname.startsWith('/demo');
-  if (!isDemoApi && !isDemo) {
-    return false;
+const pathname = parsedUrl.pathname;
+const isDemoApi = pathname.startsWith('/demo-api');
+const isDemo = pathname.startsWith('/demo');
+if (!isDemoApi && !isDemo) {
+return false;
   }
-  const basePath = isDemoApi ? '/demo-api' : '/demo';
-  const relativePath = pathname.startsWith(basePath) ? pathname.slice(basePath.length) || '/' : '/';
-
-  if (req.method === 'GET' && relativePath === '/health') {
-    sendJson(res, 200, { ok: true, time: new Date().toISOString() });
-    return true;
+const basePath = isDemoApi ? '/demo-api' : '/demo';
+const relativePath = pathname.startsWith(basePath) ? pathname.slice(basePath.length) || '/' : '/';
+if (req.method === 'GET' && relativePath === '/health') {
+sendJson(res, 200, { ok: true, time: new Date().toISOString() });
+return true;
   }
-
-  if (req.method === 'GET' && relativePath === '/users') {
-    sendJson(res, 200, demoUsers);
-    return true;
+if (req.method === 'GET' && relativePath === '/users') {
+sendJson(res, 200, demoUsers);
+return true;
   }
-
-  const userMatch = relativePath.match(/^\/users\/(\d+)$/);
-  if (req.method === 'GET' && userMatch) {
-    const userId = Number(userMatch[1]);
-    const user = demoUsers.find((item) => item.id === userId);
-    if (!user) {
-      sendJson(res, 404, { error: 'User not found' });
-      return true;
+const userMatch = relativePath.match(/^\/users\/(\d+)$/);
+if (req.method === 'GET' && userMatch) {
+const userId = Number(userMatch[1]);
+const user = demoUsers.find((item) => item.id === userId);
+if (!user) {
+sendJson(res, 404, { error: 'User not found' });
+return true;
     }
-    sendJson(res, 200, user);
-    return true;
+sendJson(res, 200, user);
+return true;
   }
-
-  if (req.method === 'POST' && relativePath === '/users') {
-    try {
-      const body = await readRequestBody(req);
-      const data = JSON.parse(body);
-      if (typeof data.name !== 'string' || data.name.trim().length === 0) {
-        sendJson(res, 400, { error: 'Name is required' });
-        return true;
+if (req.method === 'POST' && relativePath === '/users') {
+try {
+const body = await readRequestBody(req);
+const data = JSON.parse(body);
+if (typeof data.name !== 'string' || data.name.trim().length === 0) {
+sendJson(res, 400, { error: 'Name is required' });
+return true;
       }
-      const user = { id: nextDemoUserId++, name: data.name.trim() };
-      demoUsers.push(user);
-      sendJson(res, 201, user);
-      return true;
+const user = { id: nextDemoUserId++, name: data.name.trim() };
+demoUsers.push(user);
+sendJson(res, 201, user);
+return true;
     } catch (error) {
-      sendJson(res, 400, { error: 'Invalid JSON' });
-      return true;
+sendJson(res, 400, { error: 'Invalid JSON' });
+return true;
     }
   }
-
-  if ((req.method === 'PUT' || req.method === 'PATCH') && userMatch) {
-    try {
-      const userId = Number(userMatch[1]);
-      const body = await readRequestBody(req);
-      const data = JSON.parse(body);
-      if (typeof data.name !== 'string' || data.name.trim().length === 0) {
-        sendJson(res, 400, { error: 'Name is required' });
-        return true;
+if ((req.method === 'PUT' || req.method === 'PATCH') && userMatch) {
+try {
+const userId = Number(userMatch[1]);
+const body = await readRequestBody(req);
+const data = JSON.parse(body);
+if (typeof data.name !== 'string' || data.name.trim().length === 0) {
+sendJson(res, 400, { error: 'Name is required' });
+return true;
       }
-      const index = demoUsers.findIndex((item) => item.id === userId);
-      if (index < 0) {
-        sendJson(res, 404, { error: 'User not found' });
-        return true;
+const index = demoUsers.findIndex((item) => item.id === userId);
+if (index < 0) {
+sendJson(res, 404, { error: 'User not found' });
+return true;
       }
-      demoUsers[index] = { ...demoUsers[index], name: data.name.trim() };
-      sendJson(res, 200, demoUsers[index]);
-      return true;
+demoUsers[index] = { ...demoUsers[index], name: data.name.trim() };
+sendJson(res, 200, demoUsers[index]);
+return true;
     } catch (error) {
-      sendJson(res, 400, { error: 'Invalid JSON' });
-      return true;
+sendJson(res, 400, { error: 'Invalid JSON' });
+return true;
     }
   }
-
-  if (req.method === 'DELETE' && userMatch) {
-    const userId = Number(userMatch[1]);
-    const index = demoUsers.findIndex((item) => item.id === userId);
-    if (index < 0) {
-      sendJson(res, 404, { error: 'User not found' });
-      return true;
+if (req.method === 'DELETE' && userMatch) {
+const userId = Number(userMatch[1]);
+const index = demoUsers.findIndex((item) => item.id === userId);
+if (index < 0) {
+sendJson(res, 404, { error: 'User not found' });
+return true;
     }
-    demoUsers.splice(index, 1);
-    sendJson(res, 200, { deleted: true });
-    return true;
+demoUsers.splice(index, 1);
+sendJson(res, 200, { deleted: true });
+return true;
   }
-
-  sendJson(res, 404, { error: 'Demo endpoint not found' });
-  return true;
+sendJson(res, 404, { error: 'Demo endpoint not found' });
+return true;
 }
-
 function handlePostRequest(req, res, parsedUrl) {
-  if (parsedUrl.pathname === '/message') {
-    void handleMessagePost(req, res);
+if (parsedUrl.pathname === '/message') {
+void handleMessagePost(req, res);
   } else if (parsedUrl.pathname.startsWith('/api/')) {
-    if (!routeApiRequest(req, res, parsedUrl)) {
-      res.writeHead(404, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ error: 'Not found' }));
+if (!routeApiRequest(req, res, parsedUrl)) {
+res.writeHead(404, { 'Content-Type': 'application/json' });
+res.end(JSON.stringify({ error: 'Not found' }));
     }
   } else {
-    res.writeHead(404, { 'Content-Type': 'text/plain' });
-    res.end('Not found');
+res.writeHead(404, { 'Content-Type': 'text/plain' });
+res.end('Not found');
   }
 }
-
-// Create HTTP server
+/**
+ * ============
+ * HTTP server
+ * ============
+ */
 const server = http.createServer((req, res) => {
-  const parsedUrl = url.parse(req.url, true);
-  let pathName = parsedUrl.pathname === '/' ? '/index.html' : parsedUrl.pathname;
-
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-  if (req.method === 'OPTIONS') {
-    res.writeHead(204);
-    res.end();
-    return;
+const parsedUrl = url.parse(req.url, true);
+const pathName = parsedUrl.pathname === '/' ? '/index.html' : parsedUrl.pathname;
+// Basic CORS (for your own /api/* endpoints)
+res.setHeader('Access-Control-Allow-Origin', '*');
+res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
+res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+if (req.method === 'OPTIONS') {
+res.writeHead(204);
+res.end();
+return;
   }
-
-  if (parsedUrl.pathname.startsWith('/api/')) {
-    if (!routeApiRequest(req, res, parsedUrl)) {
-      sendJson(res, 404, { error: 'Not found' });
+// /api/*
+if (parsedUrl.pathname.startsWith('/api/')) {
+if (!routeApiRequest(req, res, parsedUrl)) {
+sendJson(res, 404, { error: 'Not found' });
     }
-    return;
+return;
   }
-
-  if (parsedUrl.pathname.startsWith('/demo-api') || parsedUrl.pathname.startsWith('/demo')) {
-    void routeDemoRequest(req, res, parsedUrl);
-    return;
+// /demo-api/* or /demo/*
+if (parsedUrl.pathname.startsWith('/demo-api') || parsedUrl.pathname.startsWith('/demo')) {
+void routeDemoRequest(req, res, parsedUrl);
+return;
   }
-
-  // Handle POST requests
-  if (req.method === 'POST') {
-    handlePostRequest(req, res, parsedUrl);
-    return;
+// POST /message and legacy handler
+if (req.method === 'POST') {
+handlePostRequest(req, res, parsedUrl);
+return;
   }
-
-  // In production mode, serve static files from dist directory
-  if (isProduction) {
-    // Strip leading slashes so path.join/resolve can't ignore DIST_DIR
-    let filePath = path.join(DIST_DIR, pathName.replace(/^\/+/, ''));
-
-    // Security check - prevent directory traversal
-    const resolvedDistDir = path.resolve(DIST_DIR);
-    const resolvedFilePath = path.resolve(filePath);
-    const relativePath = path.relative(resolvedDistDir, resolvedFilePath);
-
-    // Reject if path tries to traverse outside the base directory
-    if (relativePath.startsWith('..')) {
-      res.writeHead(403, { 'Content-Type': 'text/plain' });
-      res.end('Forbidden');
-      return;
+// Production: serve static dist
+if (isProduction) {
+// Strip leading slashes so path.join/resolve can't ignore DIST_DIR
+const filePath = path.join(DIST_DIR, pathName.replace(/^\/+/, ''));
+// Security check - prevent directory traversal
+const resolvedDistDir = path.resolve(DIST_DIR);
+const resolvedFilePath = path.resolve(filePath);
+const relativePath = path.relative(resolvedDistDir, resolvedFilePath);
+if (relativePath.startsWith('..')) {
+res.writeHead(403, { 'Content-Type': 'text/plain' });
+res.end('Forbidden');
+return;
     }
-
-    serveFile(filePath, res);
+serveFile(filePath, res);
   } else {
-    // Development mode - static files are served by Vite
-    res.writeHead(404, { 'Content-Type': 'text/plain' });
-    res.end('Not found (development mode - use Vite dev server `npm run start:dev`)');
+res.writeHead(404, { 'Content-Type': 'text/plain' });
+res.end('Not found (development mode - use Vite dev server `npm run start:dev`)');
   }
 });
-
-// Create WebSocket server only if WebSocket is available
-// Note: WebSocket upgrade handling is performed automatically by the ws library
-// when attached to the HTTP server. The HTTP request handler should NOT send
-// a response for upgrade requests - the ws library handles the upgrade internally.
+/**
+ * =============
+ * WebSocket /ws
+ * =============
+ */
 if (isWebSocketAvailable) {
-  const wss = new WebSocket.Server({
-    server,
-    path: '/ws'
+const wss = new WebSocket.Server({
+server,
+path: '/ws'
   });
-
-  wss.on('connection', (ws, req) => {
-    console.log('New WebSocket client connected');
-    wsClients.add(ws);
-
-    ws.on('close', () => {
-      console.log('WebSocket client disconnected');
-      wsClients.delete(ws);
+wss.on('connection', (ws) => {
+console.log('New WebSocket client connected');
+wsClients.add(ws);
+ws.on('close', () => {
+console.log('WebSocket client disconnected');
+wsClients.delete(ws);
     });
-
-    ws.on('error', (error) => {
-      console.error('WebSocket error:', error);
-      wsClients.delete(ws);
+ws.on('error', (error) => {
+console.error('WebSocket error:', error);
+wsClients.delete(ws);
     });
   });
 }
-
-// Start server
+/**
+ * ==========
+ * Startup
+ * ==========
+ */
 server.listen(PORT, () => {
-  console.log(`Server running at http://localhost:${PORT}`);
-  if (isProduction) {
-    console.log(`Serving static files from: ${DIST_DIR}`);
+console.log(`Server running at http://localhost:${PORT}`);
+if (isProduction) {
+console.log(`Serving static files from: ${DIST_DIR}`);
   } else {
-    console.log(`Development mode - static files served by Vite`);
+console.log(`Development mode - static files served by Vite`);
   }
-  if (isWebSocketAvailable) {
-    console.log(`WebSocket server running on /ws`);
+if (isWebSocketAvailable) {
+console.log(`WebSocket server running on /ws`);
   } else {
-    console.log(`WebSocket functionality disabled - install 'ws' package to enable`);
+console.log(`WebSocket functionality disabled - install 'ws' package to enable`);
   }
-  console.log('Press Ctrl+C to stop the server');
+console.log('Press Ctrl+C to stop the server');
 });
-
 // Handle server errors
 server.on('error', (err) => {
-  if (err.code === 'EADDRINUSE') {
-    console.error(`Port ${PORT} is already in use. Please try a different port.`);
+if (err.code === 'EADDRINUSE') {
+console.error(`Port ${PORT} is already in use. Please try a different port.`);
   } else {
-    console.error('Server error:', err);
+console.error('Server error:', err);
   }
-  process.exit(1);
+process.exit(1);
 });
-
 // Graceful shutdown
 process.on('SIGINT', () => {
-  console.log('\nShutting down server...');
-  server.close(() => {
-    console.log('Server closed');
-    process.exit(0);
+console.log('\nShutting down server...');
+server.close(() => {
+console.log('Server closed');
+process.exit(0);
   });
 });
 
@@ -4818,7 +6742,7 @@ export default defineConfig({
     allowedHosts: true,
     port: 3000,
     proxy: {
-      '/api': {
+      '/api/': {
         target: 'http://localhost:3001',
         changeOrigin: true
       },

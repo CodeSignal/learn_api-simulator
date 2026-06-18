@@ -1,4 +1,6 @@
+import { useEffect, useRef, useState } from 'react';
 import { HttpMethod } from '../../../types/http';
+import { ChevronDownIcon } from '../../icons';
 
 interface RequestBarProps {
   method: HttpMethod;
@@ -23,8 +25,9 @@ function methodClass(method: HttpMethod): string {
     case 'POST':
       return 'api-method-post';
     case 'PUT':
-    case 'PATCH':
       return 'api-method-put';
+    case 'PATCH':
+      return 'api-method-patch';
     case 'DELETE':
       return 'api-method-delete';
     default:
@@ -45,51 +48,120 @@ export function RequestBar({
   onSave,
   onClear
 }: RequestBarProps) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const sendMenuRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!menuOpen) {
+      return;
+    }
+
+    const handlePointerDown = (event: MouseEvent) => {
+      if (!sendMenuRef.current?.contains(event.target as Node)) {
+        setMenuOpen(false);
+      }
+    };
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setMenuOpen(false);
+      }
+    };
+
+    window.addEventListener('mousedown', handlePointerDown);
+    window.addEventListener('keydown', handleEscape);
+    return () => {
+      window.removeEventListener('mousedown', handlePointerDown);
+      window.removeEventListener('keydown', handleEscape);
+    };
+  }, [menuOpen]);
+
   return (
-    <div className="box card tw-bg-white tw-p-3">
-      <div className="tw-grid tw-grid-cols-1 lg:tw-grid-cols-[120px_1fr_auto] tw-gap-2 tw-items-end">
-        <label className="tw-flex tw-flex-col tw-gap-1">
-          <span className="body-small tw-opacity-70">Method</span>
-          <select
-            className={`input ${methodClass(method)}`}
-            value={method}
-            disabled={methodDisabled}
-            onChange={(event) => onChangeMethod(event.target.value as HttpMethod)}
-            aria-label="HTTP method"
+    <div className="api-request-bar">
+      <div className="api-request-main">
+        <select
+          className={`input api-method-select ${methodClass(method)}`}
+          value={method}
+          disabled={methodDisabled}
+          onChange={(event) => onChangeMethod(event.target.value as HttpMethod)}
+          aria-label="HTTP method"
+        >
+          {METHODS.map((option) => (
+            <option key={option} value={option}>
+              {option}
+            </option>
+          ))}
+        </select>
+
+        <input
+          className="input api-url-input"
+          type="text"
+          value={url}
+          disabled={urlDisabled}
+          onChange={(event) => onChangeUrl(event.target.value)}
+          placeholder="http://localhost:3001/demo-api/health"
+          aria-label="Request URL"
+        />
+
+        <div className="api-send-group" ref={sendMenuRef}>
+          <button
+            type="button"
+            className="button button-primary api-send-button"
+            onClick={() => {
+              setMenuOpen(false);
+              onSend();
+            }}
+            disabled={isSending}
           >
-            {METHODS.map((option) => (
-              <option key={option} value={option}>
-                {option}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <label className="tw-flex tw-flex-col tw-gap-1">
-          <span className="body-small tw-opacity-70">URL</span>
-          <input
-            className="input"
-            type="text"
-            value={url}
-            disabled={urlDisabled}
-            onChange={(event) => onChangeUrl(event.target.value)}
-            placeholder="http://localhost:3001/demo-api/health"
-          />
-        </label>
-
-        <div className="tw-flex tw-flex-wrap tw-gap-2 lg:tw-justify-end">
-          <button type="button" className="button button-primary" onClick={onSend} disabled={isSending}>
             {isSending ? 'Sending...' : 'Send'}
           </button>
-          <button type="button" className="button button-secondary" onClick={onCopyCurl}>
-            Copy cURL
+          <button
+            type="button"
+            className="button button-primary api-send-menu-toggle"
+            aria-label="Open send actions"
+            aria-haspopup="menu"
+            aria-expanded={menuOpen}
+            onClick={() => setMenuOpen((prev) => !prev)}
+          >
+            <ChevronDownIcon size={14} />
           </button>
-          <button type="button" className="button button-tertiary" onClick={onSave}>
-            Save
-          </button>
-          <button type="button" className="button button-text" onClick={onClear}>
-            Clear
-          </button>
+          {menuOpen && (
+            <div className="api-send-menu" role="menu" aria-label="Send actions">
+              <button
+                type="button"
+                className="api-send-menu-item"
+                role="menuitem"
+                onClick={() => {
+                  setMenuOpen(false);
+                  onCopyCurl();
+                }}
+              >
+                Copy cURL
+              </button>
+              <button
+                type="button"
+                className="api-send-menu-item"
+                role="menuitem"
+                onClick={() => {
+                  setMenuOpen(false);
+                  onSave();
+                }}
+              >
+                Save
+              </button>
+              <button
+                type="button"
+                className="api-send-menu-item"
+                role="menuitem"
+                onClick={() => {
+                  setMenuOpen(false);
+                  onClear();
+                }}
+              >
+                New Request
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>

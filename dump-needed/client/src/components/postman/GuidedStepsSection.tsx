@@ -26,7 +26,7 @@ export function GuidedStepsSection({
 
   if (steps.length === 0) {
     return (
-      <div className="box card tw-bg-white tw-p-4">
+      <div className="box card non-interactive tw-bg-white tw-p-4">
         <h3 className="heading-small">Guided Steps</h3>
         <p className="body-small tw-opacity-70 tw-mt-2">No guided steps configured for this task.</p>
       </div>
@@ -35,7 +35,7 @@ export function GuidedStepsSection({
 
   return (
     <section className="tw-grid tw-grid-cols-1 lg:tw-grid-cols-[360px_1fr] tw-gap-3 tw-h-full tw-min-h-0">
-      <div className="box card tw-bg-white tw-p-3 tw-overflow-auto">
+      <div className="box card non-interactive tw-bg-white tw-p-3 tw-overflow-auto">
         <StepList
           steps={steps}
           completedStepIds={completedStepIds}
@@ -45,7 +45,7 @@ export function GuidedStepsSection({
       </div>
 
       <div className="tw-space-y-3 tw-min-h-0">
-        <div className="box card tw-bg-white tw-p-3">
+        <div className="box card non-interactive tw-bg-white tw-p-3">
           <div className="row-between tw-gap-2">
             <div>
               <h3 className="heading-small">{selectedStep ? selectedStep.title : 'Select a step'}</h3>
@@ -59,7 +59,7 @@ export function GuidedStepsSection({
           </div>
         </div>
 
-        <div className="box card tw-bg-white tw-p-3 tw-overflow-auto">
+        <div className="box card non-interactive tw-bg-white tw-p-3 tw-overflow-auto">
           <div className="row-between tw-mb-2">
             <h4 className="heading-small">Check Results</h4>
             {selectedStep && (

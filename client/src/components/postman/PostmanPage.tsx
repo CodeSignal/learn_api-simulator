@@ -59,7 +59,7 @@ interface PostmanPageProps {
   onRestoreSaved: (item: SavedRequest) => void;
 }
 
-const SECTIONS: AppSection[] = ["request", "guided", "activity", "logs"];
+const SECTIONS: AppSection[] = ["request", "activity", "logs"];
 
 export function PostmanPage({
   config,

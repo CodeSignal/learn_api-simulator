@@ -99,7 +99,7 @@ export function RequestBar({
           value={url}
           disabled={urlDisabled}
           onChange={(event) => onChangeUrl(event.target.value)}
-          placeholder="http://localhost:3001/demo-api/health"
+          placeholder="http://localhost:<port>/your-endpoint"
           aria-label="Request URL"
         />
 

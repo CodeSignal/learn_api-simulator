@@ -271,18 +271,29 @@ sendJson(res, 500, { error: 'Failed to reset data' });
  * - This endpoint runs inside the container, so it CAN reach sidecars (localhost:3001 or service-name:3001).
  *
  * Security:
- * - This version is allowlisted to local hosts + port 3001 by default.
- * - You can expand allowed hosts/ports safely later.
+ * - Only configured local sidecar hosts and ports are allowed.
+ * - Override the defaults with PROXY_ALLOWED_HOSTS / PROXY_ALLOWED_PORTS.
  */
-const DEFAULT_ALLOWED_HOSTS = new Set([
+const DEFAULT_ALLOWED_HOSTS = [
 'localhost',
 '127.0.0.1',
-// include common docker name "reading-tracker" (optional)
+'::1',
+'[::1]',
 'reading-tracker'
-]);
-const DEFAULT_ALLOWED_PORTS = new Set([
-'3001'
-]);
+];
+const DEFAULT_ALLOWED_PORTS = ['3001', '3003', '4000', '5432', '5000', '8000', '8080'];
+function readCsvSetFromEnv(name, defaults) {
+const raw = process.env[name];
+if (!raw) return new Set(defaults);
+return new Set(
+raw
+      .split(',')
+      .map((item) => item.trim())
+      .filter(Boolean)
+  );
+}
+const ALLOWED_PROXY_HOSTS = readCsvSetFromEnv('PROXY_ALLOWED_HOSTS', DEFAULT_ALLOWED_HOSTS);
+const ALLOWED_PROXY_PORTS = readCsvSetFromEnv('PROXY_ALLOWED_PORTS', DEFAULT_ALLOWED_PORTS);
 function normalizeHeaders(input) {
 const out = {};
 if (!input || typeof input !== 'object') return out;
@@ -290,6 +301,8 @@ for (const [k, v] of Object.entries(input)) {
 if (typeof k !== 'string') continue;
 // ignore undefined/null
 if (v === undefined || v === null) continue;
+const lowerKey = k.toLowerCase();
+if (lowerKey === 'host' || lowerKey === 'content-length') continue;
 out[k] = String(v);
   }
 return out;
@@ -297,15 +310,22 @@ return out;
 function shouldAllowTarget(targetUrl) {
 try {
 const u = new URL(targetUrl);
-const hostOk = DEFAULT_ALLOWED_HOSTS.has(u.hostname);
+const hostOk = ALLOWED_PROXY_HOSTS.has(u.hostname);
 const port = u.port || (u.protocol === 'https:' ? '443' : '80');
-const portOk = DEFAULT_ALLOWED_PORTS.has(port);
+const portOk = ALLOWED_PROXY_PORTS.has(port);
 // only http(s)
 const protoOk = u.protocol === 'http:' || u.protocol === 'https:';
 return protoOk && hostOk && portOk;
   } catch (_) {
 return false;
   }
+}
+function getProxyAllowlistDetails() {
+return {
+allowedHosts: Array.from(ALLOWED_PROXY_HOSTS).sort(),
+allowedPorts: Array.from(ALLOWED_PROXY_PORTS).sort(),
+allowedProtocols: ['http:', 'https:']
+  };
 }
 async function handleProxy(req, res, parsedUrl) {
 try {
@@ -334,23 +354,29 @@ if (typeof targetUrl !== 'string' || !targetUrl) {
 sendJson(res, 400, { error: 'url is required' });
 return;
     }
+targetUrl = targetUrl.trim();
+if (!targetUrl) {
+sendJson(res, 400, { error: 'url is required' });
+return;
+    }
 if (!shouldAllowTarget(targetUrl)) {
 sendJson(res, 403, {
 error: 'Target not allowed',
-details: 'Only local sidecar hosts on port 3001 are allowed by default.',
-target: targetUrl
+details: 'Only configured local sidecar hosts and ports are allowed.',
+target: targetUrl,
+allowlist: getProxyAllowlistDetails()
       });
 return;
     }
 // Ensure method is one of supported ones
-const allowedMethods = new Set(['GET', 'POST', 'PUT', 'PATCH', 'DELETE']);
+const allowedMethods = new Set(['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS']);
 if (!allowedMethods.has(method)) {
 sendJson(res, 400, { error: `Unsupported method: ${method}` });
 return;
     }
 // Prepare body
 let outgoingBody = undefined;
-if (method !== 'GET' && method !== 'DELETE' && body != null) {
+if (method !== 'GET' && method !== 'HEAD' && body != null) {
 if (typeof body === 'string') {
 outgoingBody = body;
       } else {

@@ -8,9 +8,9 @@ interface AuthEditorProps {
 
 export function AuthEditor({ auth, locked, onChange }: AuthEditorProps) {
   return (
-    <div className="tw-space-y-3">
+    <div className="api-auth-editor">
       <label className="tw-flex tw-flex-col tw-gap-1">
-        <span className="body-small tw-opacity-70">Auth type</span>
+        <span className="body-small api-field-label">Auth type</span>
         <select
           className="input"
           value={auth.type}
@@ -34,7 +34,7 @@ export function AuthEditor({ auth, locked, onChange }: AuthEditorProps) {
 
       {auth.type === 'bearer' && (
         <label className="tw-flex tw-flex-col tw-gap-1">
-          <span className="body-small tw-opacity-70">Token</span>
+          <span className="body-small api-field-label">Token</span>
           <input
             className="input"
             type="password"
@@ -48,7 +48,7 @@ export function AuthEditor({ auth, locked, onChange }: AuthEditorProps) {
       {auth.type === 'basic' && (
         <div className="tw-grid tw-grid-cols-1 md:tw-grid-cols-2 tw-gap-2">
           <label className="tw-flex tw-flex-col tw-gap-1">
-            <span className="body-small tw-opacity-70">Username</span>
+            <span className="body-small api-field-label">Username</span>
             <input
               className="input"
               type="text"
@@ -58,7 +58,7 @@ export function AuthEditor({ auth, locked, onChange }: AuthEditorProps) {
             />
           </label>
           <label className="tw-flex tw-flex-col tw-gap-1">
-            <span className="body-small tw-opacity-70">Password</span>
+            <span className="body-small api-field-label">Password</span>
             <input
               className="input"
               type="password"
@@ -73,7 +73,7 @@ export function AuthEditor({ auth, locked, onChange }: AuthEditorProps) {
       {auth.type === 'apiKey' && (
         <div className="tw-grid tw-grid-cols-1 md:tw-grid-cols-[1fr_180px_1fr] tw-gap-2">
           <label className="tw-flex tw-flex-col tw-gap-1">
-            <span className="body-small tw-opacity-70">Key</span>
+            <span className="body-small api-field-label">Key</span>
             <input
               className="input"
               type="text"
@@ -83,7 +83,7 @@ export function AuthEditor({ auth, locked, onChange }: AuthEditorProps) {
             />
           </label>
           <label className="tw-flex tw-flex-col tw-gap-1">
-            <span className="body-small tw-opacity-70">Add to</span>
+            <span className="body-small api-field-label">Add to</span>
             <select
               className="input"
               value={auth.apiKeyIn ?? 'header'}
@@ -95,7 +95,7 @@ export function AuthEditor({ auth, locked, onChange }: AuthEditorProps) {
             </select>
           </label>
           <label className="tw-flex tw-flex-col tw-gap-1">
-            <span className="body-small tw-opacity-70">Value</span>
+            <span className="body-small api-field-label">Value</span>
             <input
               className="input"
               type="password"

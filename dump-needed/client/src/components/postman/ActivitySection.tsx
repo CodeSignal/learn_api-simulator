@@ -21,7 +21,7 @@ interface ActivitySectionProps {
 export function ActivitySection({ activity, savedRequests, onRestoreSaved }: ActivitySectionProps) {
   return (
     <section className="tw-grid tw-grid-cols-1 xl:tw-grid-cols-2 tw-gap-3 tw-h-full tw-min-h-0">
-      <div className="box card tw-bg-white tw-p-3 tw-overflow-auto">
+      <div className="box card non-interactive tw-bg-white tw-p-3 tw-overflow-auto">
         <h3 className="heading-small tw-mb-2">Activity Log</h3>
         {activity.length === 0 ? (
           <p className="body-small tw-opacity-70">No activity yet.</p>
@@ -37,7 +37,7 @@ export function ActivitySection({ activity, savedRequests, onRestoreSaved }: Act
         )}
       </div>
 
-      <div className="box card tw-bg-white tw-p-3 tw-overflow-auto">
+      <div className="box card non-interactive tw-bg-white tw-p-3 tw-overflow-auto">
         <h3 className="heading-small tw-mb-2">Saved Requests</h3>
         {savedRequests.length === 0 ? (
           <p className="body-small tw-opacity-70">No saved requests yet.</p>

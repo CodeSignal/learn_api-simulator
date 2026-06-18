@@ -17,8 +17,8 @@ const TAB_ITEMS: Array<{ id: EditorTabKey; label: string }> = [
 
 export function EditorTabs({ activeTab, onChange, sections }: EditorTabsProps) {
   return (
-    <div className="box card tw-bg-white tw-p-3 tw-space-y-3 tw-min-h-[240px]">
-      <div className="tw-flex tw-flex-wrap tw-gap-2" role="tablist" aria-label="Request editor tabs">
+    <div className="api-editor-panel">
+      <div className="api-tab-row" role="tablist" aria-label="Request editor tabs">
         {TAB_ITEMS.map((tab) => {
           const isActive = activeTab === tab.id;
           return (
@@ -28,7 +28,7 @@ export function EditorTabs({ activeTab, onChange, sections }: EditorTabsProps) {
               role="tab"
               aria-selected={isActive}
               tabIndex={isActive ? 0 : -1}
-              className={`button ${isActive ? 'button-primary' : 'button-text'}`}
+              className={`api-tab ${isActive ? 'api-tab-active' : ''}`}
               onClick={() => onChange(tab.id)}
             >
               {tab.label}
@@ -36,7 +36,7 @@ export function EditorTabs({ activeTab, onChange, sections }: EditorTabsProps) {
           );
         })}
       </div>
-      <div role="tabpanel" className="tw-max-h-[300px] tw-overflow-auto">
+      <div role="tabpanel" className="api-editor-content">
         {sections[activeTab]}
       </div>
     </div>

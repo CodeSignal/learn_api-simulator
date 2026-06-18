@@ -1,106 +1,1322 @@
+/* ================================================================
+   API Simulator – Dark Theme
+   ================================================================ */
+
+/* Step 1: Height chain – ensure full-viewport propagation */
+html, body {
+  height: 100%;
+  margin: 0;
+}
+
+.bespoke {
+  height: 100%;
+  overflow: hidden;
+}
+
 .bespoke .api-sim-root {
-  height: calc(100vh - 42px);
+  height: 100vh;
   display: flex;
+  background: #0b1119;
 }
 
 .bespoke #api-sim-root {
   width: 100%;
+  min-width: 0;
 }
 
+.bespoke .header {
+  display: none;
+}
+
+/* ----------------------------------------------------------------
+   App shell & theme tokens
+   ---------------------------------------------------------------- */
 .bespoke .api-sim-app {
+  --bg-0: #0f1520;
+  --bg-1: #151d2a;
+  --bg-2: #1c2535;
+  --bg-3: #111925;
+  --border: #2e3b51;
+  --border-strong: #395170;
+  --text: #e6edf7;
+  --muted: #9fb0c7;
+  --primary: #2f81f6;
+  --primary-hover: #246fda;
+  --focus: rgba(47, 129, 246, 0.38);
+  --danger: #ff7676;
+
   height: 100%;
-  color: #0f172a;
-  background: #f3f6fb;
+  display: flex;
+  flex-direction: column;
+  background:
+    radial-gradient(1100px 500px at 15% -10%, rgba(47, 129, 246, 0.12), transparent 60%),
+    radial-gradient(900px 420px at 95% 0%, rgba(53, 99, 179, 0.1), transparent 62%),
+    var(--bg-0);
+  color: var(--text);
 }
 
 .bespoke .api-sim-layout {
   display: flex;
-  height: 100%;
+  flex-direction: column;
+  flex: 1;
   width: 100%;
+  min-height: 0;
 }
 
+/* ----------------------------------------------------------------
+   Top navbar – rectangular tab bar, 56px, real-product feel
+   ---------------------------------------------------------------- */
 .bespoke .api-sim-topbar {
-  background: #ffffff;
-  border-bottom: 1px solid var(--Colors-Stroke-Subtle);
+  min-height: 56px;
+  display: flex;
+  align-items: stretch;       /* children stretch full height */
+  justify-content: space-between;
+  gap: 0;
+  padding: 0 20px;            /* flush top/bottom, spacious horizontal */
+  border-bottom: 1px solid var(--border);
+  background: rgba(10, 14, 22, 0.97);
+  backdrop-filter: blur(8px);
+  flex-shrink: 0;
 }
 
-.bespoke .api-sim-nav {
-  width: 220px;
-  border-right: 1px solid var(--Colors-Stroke-Subtle);
+.bespoke .api-sim-brand {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  padding-right: 20px;        /* gap between brand and nav tabs */
+  flex-shrink: 0;
 }
 
-.bespoke .api-sim-layout-sidebar {
-  width: 320px;
-  border-right: 1px solid var(--Colors-Stroke-Subtle);
+.bespoke .api-sim-brand .heading-small {
+  margin: 0;
+  font-size: 13.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text);
+}
+
+.bespoke .api-sim-topbar-controls {
+  width: auto;
+  display: flex;
+  align-items: stretch;       /* tabs stretch full bar height */
+  gap: 8px;
+  min-width: 0;
+  margin-left: auto;
+}
+
+/* Flat tab bar – no pill container, no border, no background */
+.bespoke .api-sim-section-switcher {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  overflow-x: auto;
+  /* Hide scrollbar on switcher itself */
+  scrollbar-width: none;
+}
+
+.bespoke .api-sim-section-switcher::-webkit-scrollbar {
+  display: none;
+}
+
+/* Tab – rectangular, full-height, bottom-border active indicator */
+.bespoke .api-section-tab {
+  border: 0;
+  border-bottom: 2px solid transparent;   /* active underline */
+  border-radius: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 13.5px;
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+  padding: 0 18px;            /* wide horizontal, full height vertically */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: color 0.12s ease, background 0.12s ease, border-color 0.12s ease;
+}
+
+.bespoke .api-section-tab:hover {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+/* Active: blue bottom underline + very subtle fill */
+.bespoke .api-section-tab-active {
+  color: var(--text);
+  background: rgba(47, 129, 246, 0.07);
+  border-bottom-color: var(--primary);
+  font-weight: 600;
+}
+
+/* Help button – rectangular, self-centered in the bar */
+.bespoke .api-help-button {
+  align-self: center;         /* don't stretch full height */
+  min-height: 32px !important;
+  height: 32px;
+  padding: 0 14px !important;
+  font-size: 13px;
+  font-weight: 500;
+  border-radius: 6px !important;          /* rectangular, not pill */
+  border: 1px solid var(--border) !important;
+  color: var(--muted) !important;
+  transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease;
+}
+
+.bespoke .api-help-button:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text) !important;
+  border-color: var(--border-strong) !important;
+}
+
+/* Mobile hamburger menu toggle (hidden on desktop) */
+.bespoke .api-mobile-menu-toggle {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  padding: 6px;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: background 0.12s ease;
+}
+
+.bespoke .api-mobile-menu-toggle:hover {
+  background: #1a2536;
+}
+
+/* Mobile nav overlay */
+.bespoke .api-mobile-nav-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.bespoke .api-mobile-nav-panel {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 240px;
+  height: 100%;
+  background: var(--bg-1);
+  border-left: 1px solid var(--border);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  animation: api-slide-in-right 0.15s ease-out;
+}
+
+@keyframes api-slide-in-right {
+  from { transform: translateX(100%); }
+  to   { transform: translateX(0); }
+}
+
+.bespoke .api-mobile-nav-item {
+  width: 100%;
+  text-align: left;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 600;
+  padding: 10px 12px;
+  cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+
+.bespoke .api-mobile-nav-item:hover {
+  background: #1a2536;
+  color: var(--text);
+}
+
+.bespoke .api-mobile-nav-item-active {
+  background: var(--primary);
+  color: #fff;
 }
 
 .bespoke .api-sim-layout-main {
   flex: 1;
   min-width: 0;
+  min-height: 0;
+  background: transparent;
 }
 
-.bespoke .api-sim-panel,
-.bespoke .api-sim-app .card {
-  border: 1px solid #d8e0ea;
-  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06);
+/* ----------------------------------------------------------------
+   Step 2: Design system conflict overrides
+   ---------------------------------------------------------------- */
+
+/* Override .box default padding & hover/focus states */
+.bespoke .api-sim-app .box {
+  padding: 0;
 }
 
-.bespoke .api-sim-app .body-small,
+.bespoke .api-sim-app .box:hover,
+.bespoke .api-sim-app .box:focus {
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  box-shadow: none;
+}
+
+/* Override label margins from bespoke-template.css */
+.bespoke .api-sim-app label:not(.input-checkbox):not(.input-radio) {
+  margin: 0;
+}
+
+/* Override checkbox for dark theme */
+.bespoke .api-sim-app .input-checkbox-box {
+  background: var(--bg-3);
+  border-color: var(--border);
+}
+
+.bespoke .api-sim-app .input-checkbox input:checked + .input-checkbox-box {
+  background: var(--primary);
+  border-color: var(--primary);
+}
+
+/* Override select dropdown arrow for dark theme */
+.bespoke .api-sim-app select {
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%239fb0c7' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e");
+}
+
+/* Disabled state for dark theme */
+.bespoke .api-sim-app .input:disabled,
+.bespoke .api-sim-app select:disabled,
+.bespoke .api-sim-app textarea:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Explicit body-default definition */
 .bespoke .api-sim-app .body-default {
-  color: #243244;
+  font-family: var(--body-family, "Work Sans", sans-serif);
+  font-size: 16px;
+  line-height: 1.45;
+  color: var(--text);
+}
+
+/* ----------------------------------------------------------------
+   Dark card & theme overrides
+   ---------------------------------------------------------------- */
+.bespoke .api-sim-app .card {
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2), 0 1px 2px rgba(0, 0, 0, 0.12);
+}
+
+.bespoke .api-sim-app .tw-bg-white {
+  background: var(--bg-2) !important;
+}
+
+.bespoke .api-sim-app .tw-border-border {
+  border-color: var(--border);
 }
 
 .bespoke .api-sim-app .heading-small {
-  color: #0f172a;
+  color: var(--text);
 }
 
-.bespoke .api-method-get {
-  color: #166534;
-  background: #ecfdf3;
-  border-color: #9fe6c2;
+.bespoke .api-sim-app .body-small {
+  color: var(--muted);
 }
 
-.bespoke .api-method-post {
-  color: #1d4ed8;
-  background: #eff6ff;
-  border-color: #b9d4ff;
+.bespoke .api-sim-app .input,
+.bespoke .api-sim-app select,
+.bespoke .api-sim-app textarea {
+  background: var(--bg-3);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 8px;
+  min-height: 42px;
 }
 
-.bespoke .api-method-put {
-  color: #92400e;
-  background: #fffbeb;
-  border-color: #f9d38b;
+.bespoke .api-sim-app .input::placeholder,
+.bespoke .api-sim-app textarea::placeholder {
+  color: #7488a4;
 }
 
-.bespoke .api-method-delete {
-  color: #991b1b;
-  background: #fef2f2;
-  border-color: #f6b4b4;
+.bespoke .api-sim-app .button {
+  min-height: 42px;
+  border-radius: 8px;
 }
 
-.bespoke .api-sim-app pre {
+.bespoke .api-sim-app .button.button-primary {
+  background: var(--primary);
+  color: #fff;
+  border-color: transparent;
+}
+
+.bespoke .api-sim-app .button.button-primary:hover {
+  background: var(--primary-hover);
+}
+
+.bespoke .api-sim-app .button.button-secondary,
+.bespoke .api-sim-app .button.button-tertiary,
+.bespoke .api-sim-app .button.button-text {
+  background: transparent;
+  color: var(--muted);
+  border-color: var(--border);
+}
+
+.bespoke .api-sim-app .button.button-text {
+  border-color: transparent;
+}
+
+.bespoke .api-sim-app .button:hover {
+  color: var(--text);
+}
+
+/* Tag variants */
+.bespoke .api-sim-app .tag.tag-neutral {
+  border: 1px solid var(--border);
+  background: #151f2d;
+  color: #b0bfd4;
+}
+
+.bespoke .api-sim-app .tag.tag-positive {
+  background: rgba(68, 177, 118, 0.16);
+  border: 1px solid rgba(84, 197, 133, 0.44);
+  color: #70d89f;
+}
+
+.bespoke .api-sim-app .tag.tag-warning {
+  background: rgba(218, 165, 50, 0.18);
+  border: 1px solid rgba(237, 190, 76, 0.45);
+  color: #f2c96b;
+}
+
+.bespoke .api-sim-app .tag.tag-danger {
+  background: rgba(207, 78, 78, 0.17);
+  border: 1px solid rgba(255, 118, 118, 0.45);
+  color: #ff9898;
+}
+
+/* Focus ring */
+.bespoke .api-sim-app .button:focus-visible,
+.bespoke .api-sim-app .input:focus-visible,
+.bespoke .api-sim-app textarea:focus-visible,
+.bespoke .api-sim-app select:focus-visible,
+.bespoke .api-tab:focus-visible,
+.bespoke .api-history-item:focus-visible,
+.bespoke .api-section-tab:focus-visible,
+.bespoke .api-send-menu-item:focus-visible,
+.bespoke .api-mobile-menu-toggle:focus-visible,
+.bespoke .api-mobile-nav-item:focus-visible,
+.bespoke .api-logs-type-chip:focus-visible,
+.bespoke .api-copy-response-btn:focus-visible,
+.bespoke .api-logs-copy-btn:focus-visible,
+.bespoke .api-history-search:focus-visible,
+.bespoke .api-history-clear-btn:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
+
+/* ----------------------------------------------------------------
+   Custom scrollbar (dark theme)
+   ---------------------------------------------------------------- */
+.bespoke .api-sim-app ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.bespoke .api-sim-app ::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.bespoke .api-sim-app ::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 4px;
+}
+
+.bespoke .api-sim-app ::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* ----------------------------------------------------------------
+   Request workspace layout
+   ---------------------------------------------------------------- */
+.bespoke .api-request-workspace {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  gap: 16px;
+  overflow-y: auto;   /* allow scrolling when response pane is resized tall */
+}
+
+.bespoke .api-request-composer {
+  flex: 1 1 auto;     /* fills remaining space above the response pane */
+  min-height: 300px;
+  min-width: 0;
+}
+
+.bespoke .api-request-workbench {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;
+}
+
+.bespoke .api-request-lock-note {
+  padding: 2px 4px;
+}
+
+/* ----------------------------------------------------------------
+   Request bar
+   ---------------------------------------------------------------- */
+.bespoke .api-request-bar {
+  flex: 0 0 auto;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2), 0 1px 2px rgba(0, 0, 0, 0.12);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.bespoke .api-request-main {
+  display: grid;
+  grid-template-columns: minmax(120px, 15%) minmax(0, 1fr) minmax(160px, 15%);
+  gap: 12px;
+  align-items: stretch;
+  min-width: 0;
+}
+
+.bespoke .api-method-select,
+.bespoke .api-url-input,
+.bespoke .api-send-button,
+.bespoke .api-send-menu-toggle {
+  height: 44px;
+  min-height: 44px;
+}
+
+.bespoke .api-method-select {
+  width: 100%;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  border-width: 1px;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.bespoke .api-sim-app .api-method-select:hover {
+  border-color: var(--border-strong);
+}
+
+/* Method color accents (needs .api-sim-app for specificity over .input rule) */
+.bespoke .api-sim-app .api-method-get {
+  color: #7adbaa;
+  border-color: #305949;
+  background: linear-gradient(90deg, rgba(78, 178, 125, 0.15), rgba(17, 25, 37, 0.92));
+}
+
+.bespoke .api-sim-app .api-method-post {
+  color: #80b8ff;
+  border-color: #2e4f7f;
+  background: linear-gradient(90deg, rgba(74, 132, 226, 0.16), rgba(17, 25, 37, 0.92));
+}
+
+.bespoke .api-sim-app .api-method-put {
+  color: #f0bf79;
+  border-color: #725937;
+  background: linear-gradient(90deg, rgba(193, 136, 46, 0.16), rgba(17, 25, 37, 0.92));
+}
+
+.bespoke .api-sim-app .api-method-patch {
+  color: #bda0ff;
+  border-color: #5a4a82;
+  background: linear-gradient(90deg, rgba(132, 100, 210, 0.16), rgba(17, 25, 37, 0.92));
+}
+
+.bespoke .api-sim-app .api-method-delete {
+  color: #ff9f9f;
+  border-color: #7a4545;
+  background: linear-gradient(90deg, rgba(194, 79, 79, 0.17), rgba(17, 25, 37, 0.92));
+}
+
+.bespoke .api-url-input {
+  width: 100%;
+  min-width: 0;
+}
+
+/* Send button group */
+.bespoke .api-send-group {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 1fr 42px;
+}
+
+.bespoke .api-send-group .button {
+  margin: 0;
+}
+
+.bespoke .api-send-button {
+  width: 100%;
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.bespoke .api-send-menu-toggle {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+  border-left: 1px solid rgba(255, 255, 255, 0.24);
+  padding: 0;
+  justify-content: center;
+}
+
+/* Send dropdown menu */
+.bespoke .api-send-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 40;
+  min-width: 180px;
+  border-radius: 8px;
+  border: 1px solid var(--border-strong);
+  background: #101a28;
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.4);
+  padding: 6px;
+  animation: api-menu-fade-in 0.12s ease-out;
+}
+
+@keyframes api-menu-fade-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.bespoke .api-send-menu-item {
+  width: 100%;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  font-size: 14px;
+  padding: 8px 12px;
+  cursor: pointer;
+  transition: background 0.1s ease;
+}
+
+.bespoke .api-send-menu-item:hover {
+  background: #1e2a3e;
+}
+
+/* ----------------------------------------------------------------
+   Editor panel & tabs
+   ---------------------------------------------------------------- */
+.bespoke .api-editor-panel {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 8px 14px 14px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2), 0 1px 2px rgba(0, 0, 0, 0.12);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.bespoke .api-tab-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  overflow-x: auto;
+  white-space: nowrap;
+  border-bottom: 1px solid var(--border);
+  padding: 4px 0 0;
+}
+
+.bespoke .api-tab {
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  background: transparent;
+  color: var(--muted);
+  padding: 10px 12px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: color 0.12s ease, border-color 0.12s ease;
+}
+
+.bespoke .api-tab:hover {
+  color: var(--text);
+  border-bottom-color: rgba(47, 129, 246, 0.3);
+}
+
+.bespoke .api-tab-active {
+  color: var(--text);
+  border-bottom-color: var(--primary);
+  font-weight: 600;
+}
+
+.bespoke .api-editor-content {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 14px 0 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.bespoke .api-editor-hint,
+.bespoke .api-field-label {
+  color: var(--muted);
+}
+
+/* Key-value editor */
+.bespoke .api-kv-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.bespoke .api-kv-head {
+  display: grid;
+  grid-template-columns: 44px minmax(160px, 1fr) minmax(160px, 1fr) 40px;
+  gap: 8px;
+  align-items: center;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: 11px;
+  color: var(--muted);
+  padding: 0 2px;
+}
+
+.bespoke .api-kv-row {
+  display: grid;
+  grid-template-columns: 44px minmax(160px, 1fr) minmax(160px, 1fr) 40px;
+  gap: 8px;
+  align-items: center;
+}
+
+.bespoke .api-kv-row .input {
+  width: 100%;
+}
+
+.bespoke .api-kv-remove {
+  color: var(--danger);
+  font-size: 18px;
+  min-width: 38px;
+}
+
+.bespoke .api-add-row-button {
+  color: #9ac5ff;
+}
+
+/* Auth editor */
+.bespoke .api-auth-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Body editor */
+.bespoke .api-body-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;
+  flex: 1;
+}
+
+.bespoke .api-body-mode-row {
+  padding-top: 0;
+}
+
+.bespoke .api-body-beautify {
+  margin-left: auto;
+  height: 34px;
+  min-height: 34px;
+}
+
+/* Use .api-sim-app to beat design system's .api-sim-app textarea specificity */
+.bespoke .api-sim-app .api-body-textarea {
+  flex: 1;
+  min-height: 180px;
+  max-height: 500px;
+  width: 100%;
+  resize: vertical;
+  font-family: "JetBrains Mono", "SFMono-Regular", Menlo, Consolas, monospace;
+  font-size: 13px;
+  line-height: 1.5;
+  padding: 12px;
+}
+
+/* Body NONE empty state */
+.bespoke .api-body-none-hint {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  min-height: 80px;
+  color: var(--muted);
+  font-size: 13px;
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  background: rgba(17, 25, 37, 0.4);
+  padding: 16px;
+  text-align: center;
+}
+
+/* ----------------------------------------------------------------
+   Response pane
+   ---------------------------------------------------------------- */
+/* Response pane – user-resizable vertically */
+.bespoke .api-response-pane-wrap {
+  flex: 0 0 auto;                          /* fixed size; composer fills remaining space */
+  height: clamp(260px, 36vh, 500px);       /* good default – user can drag to resize */
+  min-height: 200px;
+  min-width: 0;
+  overflow: hidden;                        /* required for resize: vertical to work */
+  resize: vertical;
+}
+
+.bespoke .api-response-pane {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 14px 14px;
+  gap: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2), 0 1px 2px rgba(0, 0, 0, 0.12);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.bespoke .api-response-pane-error {
+  background: rgba(125, 40, 49, 0.22);
+  border-color: rgba(255, 113, 113, 0.44);
+}
+
+.bespoke .api-response-empty {
+  justify-content: center;
+  align-items: center;
+}
+
+.bespoke .api-response-empty .heading-small {
+  color: var(--muted);
+}
+
+/* Empty state hint */
+.bespoke .api-response-empty-hint {
+  text-align: center;
+  max-width: 280px;
+}
+
+.bespoke .api-response-empty-hint p {
+  margin: 0;
+}
+
+.bespoke .api-response-empty-hint p + p {
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+/* Copy response button */
+.bespoke .api-copy-response-btn {
+  display: inline-flex !important;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px !important;
+  height: 32px;
+  padding: 0 10px !important;
+  font-size: 12.5px;
+  border: 1px solid var(--border) !important;
+  border-radius: 6px !important;
+}
+
+.bespoke .api-copy-response-btn:hover {
+  background: #1a2536;
+  border-color: var(--border-strong) !important;
+}
+
+.bespoke .api-response-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  background: #162033;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 12px;
+}
+
+.bespoke .api-response-tabs {
+  margin-top: 2px;
+}
+
+.bespoke .api-response-viewer {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
+.bespoke .api-response-code,
+.bespoke .api-response-headers {
+  height: 100%;
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-3);
+  color: var(--text);
+  padding: 12px;
+}
+
+.bespoke .api-response-code {
+  margin: 0;
+  font-family: "JetBrains Mono", "SFMono-Regular", Menlo, Consolas, monospace;
+  font-size: 13px;
+  line-height: 1.5;
   white-space: pre-wrap;
   word-break: break-word;
+  resize: vertical;
+  min-height: 120px;
 }
 
+.bespoke .api-response-headers {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* ----------------------------------------------------------------
+   History drawer (improved – larger items, search, icons)
+   ---------------------------------------------------------------- */
+.bespoke .api-history-drawer {
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.bespoke .api-history-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 12px;
+}
+
+.bespoke .api-history-header-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.bespoke .api-history-controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.bespoke .api-history-clear-btn {
+  min-height: 28px !important;
+  height: 28px;
+  padding: 0 6px !important;
+  color: var(--muted) !important;
+  transition: color 0.12s ease;
+}
+
+.bespoke .api-history-clear-btn:hover {
+  color: var(--danger) !important;
+}
+
+.bespoke .api-history-content {
+  border-top: 1px solid var(--border);
+  padding: 12px;
+  max-height: min(55vh, 640px);   /* expands to use available vertical space */
+  overflow: auto;
+}
+
+/* History search input */
+.bespoke .api-history-search {
+  min-height: 34px !important;
+  height: 34px;
+  font-size: 12.5px;
+  border-radius: 6px;
+  width: 100%;
+  margin-bottom: 8px;
+}
+
+/* History item – grid layout for better scan-ability */
+.bespoke .api-history-item {
+  width: 100%;
+  text-align: left;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px 14px;    /* more breathing room – easier to scan and click */
+  background: #151f2e;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 4px 10px;
+  align-items: center;
+}
+
+.bespoke .api-history-item:hover {
+  background: #1a2940;
+  border-color: #436088;
+}
+
+/* Second row meta (status + duration) */
+.bespoke .api-history-item-meta {
+  grid-column: 2 / 3;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Method dot (history entries) */
+.bespoke .api-method-dot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 54px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.bespoke .api-method-dot.api-method-get {
+  background-color: rgba(63, 142, 100, 0.16);
+}
+
+.bespoke .api-method-dot.api-method-post {
+  background-color: rgba(67, 118, 199, 0.18);
+}
+
+.bespoke .api-method-dot.api-method-put {
+  background-color: rgba(174, 130, 62, 0.18);
+}
+
+.bespoke .api-method-dot.api-method-patch {
+  background-color: rgba(125, 97, 196, 0.2);
+}
+
+.bespoke .api-method-dot.api-method-delete {
+  background-color: rgba(166, 69, 69, 0.18);
+}
+
+/* Pre tags */
+.bespoke .api-sim-app pre {
+  margin: 0;
+}
+
+/* ----------------------------------------------------------------
+   Logs section
+   ---------------------------------------------------------------- */
+.bespoke .api-logs-section {
+  height: 100%;
+}
+
+.bespoke .api-logs-filter-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 12px;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  flex-wrap: wrap;
+}
+
+.bespoke .api-logs-type-chip {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 10px;
+  cursor: pointer;
+  transition: all 0.12s ease;
+  white-space: nowrap;
+}
+
+.bespoke .api-logs-type-chip:hover {
+  background: #1a2536;
+  color: var(--text);
+}
+
+.bespoke .api-logs-type-chip-active {
+  background: rgba(47, 129, 246, 0.15);
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.bespoke .api-logs-list {
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: auto;
+}
+
+.bespoke .api-logs-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.bespoke .api-logs-table thead th {
+  position: sticky;
+  top: 0;
+  background: var(--bg-1);
+  padding: 10px 12px;
+  text-align: left;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  border-bottom: 1px solid var(--border);
+}
+
+.bespoke .api-logs-row {
+  cursor: pointer;
+  transition: background 0.1s ease;
+}
+
+.bespoke .api-logs-row:hover {
+  background: #1a2940;
+}
+
+.bespoke .api-logs-row-expanded {
+  background: #1a2940;
+}
+
+.bespoke .api-logs-row td {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+
+.bespoke .api-logs-cell-time {
+  font-family: "JetBrains Mono", "SFMono-Regular", Menlo, Consolas, monospace;
+  font-size: 12px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.bespoke .api-logs-event-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: "JetBrains Mono", monospace;
+  background: rgba(47, 129, 246, 0.1);
+  color: #80b8ff;
+}
+
+.bespoke .api-logs-event-error {
+  background: rgba(207, 78, 78, 0.17);
+  color: #ff9898;
+}
+
+.bespoke .api-logs-copy-btn {
+  min-height: 28px !important;
+  height: 28px;
+  padding: 0 6px !important;
+  display: inline-flex !important;
+  align-items: center;
+}
+
+.bespoke .api-logs-payload-row td {
+  padding: 0 12px 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.bespoke .api-logs-payload-code {
+  margin: 0;
+  padding: 12px;
+  font-family: "JetBrains Mono", "SFMono-Regular", Menlo, Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  background: var(--bg-3);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  white-space: pre-wrap;
+  word-break: break-word;
+  min-height: 80px;
+  max-height: 400px;
+  overflow: auto;
+  resize: vertical;
+}
+
+/* ----------------------------------------------------------------
+   Responsive – Tablet (≤ 1024px)
+   ---------------------------------------------------------------- */
 @media (max-width: 1024px) {
-  .bespoke .api-sim-app {
-    height: 100%;
+  .bespoke .api-sim-topbar,
+  .bespoke .api-sim-topbar-controls {
+    justify-content: flex-start;
   }
 
-  .bespoke .api-sim-layout {
-    flex-direction: column;
+  .bespoke .api-request-composer {
+    flex: 0 0 auto;
+    min-height: 0;
   }
 
-  .bespoke .api-sim-nav {
+  .bespoke .api-response-pane-wrap {
+    height: clamp(200px, 32vh, 440px);
+    min-height: 160px;
+  }
+
+  .bespoke .api-request-main {
+    grid-template-columns: minmax(112px, 34%) minmax(0, 1fr);
+    gap: 10px;
+  }
+
+  .bespoke .api-send-group {
+    grid-column: 1 / -1;
+  }
+
+  .bespoke .api-send-button {
     width: 100%;
-    border-right: 0;
-    border-bottom: 1px solid var(--Colors-Stroke-Subtle);
   }
 
-  .bespoke .api-sim-layout-sidebar {
-    width: 100%;
-    border-right: 0;
-    border-bottom: 1px solid var(--Colors-Stroke-Subtle);
+  .bespoke .api-kv-head {
+    display: none;
+  }
+
+  .bespoke .api-kv-row {
+    grid-template-columns: auto 1fr;
+    grid-template-areas:
+      "toggle remove"
+      "key key"
+      "value value";
+    gap: 8px;
+  }
+
+  .bespoke .api-kv-row > label {
+    grid-area: toggle;
+  }
+
+  .bespoke .api-kv-row > input:nth-of-type(1) {
+    grid-area: key;
+  }
+
+  .bespoke .api-kv-row > input:nth-of-type(2) {
+    grid-area: value;
+  }
+
+  .bespoke .api-kv-remove {
+    grid-area: remove;
+    justify-self: end;
+  }
+}
+
+/* Logs table horizontal scroll on narrower screens */
+@media (max-width: 768px) {
+  .bespoke .api-logs-table {
+    min-width: 600px;
+  }
+}
+
+/* ----------------------------------------------------------------
+   Responsive – Mobile (≤ 640px)
+   ---------------------------------------------------------------- */
+@media (max-width: 640px) {
+  .bespoke .api-sim-root {
+    height: 100vh;
+  }
+
+  .bespoke .api-sim-topbar {
+    min-height: 0;
+    flex-wrap: wrap;
+    padding: 8px 12px;
+  }
+
+  .bespoke .api-sim-layout-main {
+    padding: 12px;
+  }
+
+  /* Hide desktop switcher, show hamburger */
+  .bespoke .api-sim-section-switcher {
+    display: none;
+  }
+
+  .bespoke .api-mobile-menu-toggle {
+    display: flex;
+  }
+
+  .bespoke .api-mobile-nav-overlay.api-mobile-nav-open {
+    display: block;
+  }
+
+  .bespoke .api-sim-topbar-controls {
+    width: auto;
+    justify-content: flex-end;
+    gap: 8px;
+  }
+
+  .bespoke .api-request-workspace {
+    gap: 10px;
+  }
+
+  .bespoke .api-request-bar,
+  .bespoke .api-editor-panel,
+  .bespoke .api-response-pane,
+  .bespoke .api-history-drawer {
+    border-radius: 8px;
+  }
+
+  .bespoke .api-request-main {
+    grid-template-columns: 1fr;
+  }
+
+  .bespoke .api-method-select,
+  .bespoke .api-url-input,
+  .bespoke .api-send-group {
+    grid-column: 1 / -1;
+  }
+
+  .bespoke .api-sim-app .api-body-textarea {
+    min-height: 160px;
+  }
+
+  /* Logs adjustments */
+  .bespoke .api-logs-filter-bar {
+    padding: 8px;
+  }
+
+  .bespoke .api-logs-type-chip {
+    font-size: 10px;
+    padding: 3px 8px;
+  }
+}
+
+/* ----------------------------------------------------------------
+   Responsive – Narrow mobile (≤ 400px)
+   ---------------------------------------------------------------- */
+@media (max-width: 400px) {
+  .bespoke .api-sim-brand .heading-small {
+    font-size: 13px;
+  }
+
+  .bespoke .api-sim-topbar {
+    padding: 6px 10px;
   }
 }
