@@ -1,7 +1,7 @@
 import { ReactNode, useMemo, useState } from 'react';
 import { ConfigRequestPreset } from '../../../types/config';
 import { RequestBodyMode, RequestDraft } from '../../../types/http';
-import { applyUrlInputToDraft, composeUrlFromDraft } from '../../../lib/urlDraft';
+import { applyUrlInputToDraft, composeUrlFromDraft, ensureScheme } from '../../../lib/urlDraft';
 import { generateId } from '../../../lib/id';
 import { RequestBar } from './RequestBar';
 import { EditorTabs, EditorTabKey } from './EditorTabs';
@@ -10,8 +10,19 @@ import { HeadersEditor } from './HeadersEditor';
 import { AuthEditor } from './AuthEditor';
 import { BodyEditor } from './BodyEditor';
 
+interface SavedRequest {
+  id: string;
+  name: string;
+  draft: RequestDraft;
+}
+
 interface RequestWorkbenchProps {
   draft: RequestDraft;
+  baseUrl: string;
+  onChangeBaseUrl: (value: string) => void;
+  savedRequests: SavedRequest[];
+  activeSavedRequestId: string | null;
+  onSelectSaved: (item: SavedRequest) => void;
   allowEditing?: ConfigRequestPreset['allowEditing'];
   isSending: boolean;
   onChange: (next: RequestDraft) => void;
@@ -38,6 +49,11 @@ function jsonErrorFromDraft(draft: RequestDraft): string | null {
 
 export function RequestWorkbench({
   draft,
+  baseUrl,
+  onChangeBaseUrl,
+  savedRequests,
+  activeSavedRequestId,
+  onSelectSaved,
   allowEditing,
   isSending,
   onChange,
@@ -61,6 +77,8 @@ export function RequestWorkbench({
   );
 
   const currentUrl = composeUrlFromDraft(draft);
+  const resolvedUrl = ensureScheme(composeUrlFromDraft(draft, baseUrl));
+  const baseUrlApplied = resolvedUrl.length > 0 && resolvedUrl !== currentUrl;
   const jsonError = jsonErrorFromDraft(draft);
 
   const sections: Record<EditorTabKey, ReactNode> = {
@@ -120,14 +138,42 @@ export function RequestWorkbench({
     )
   };
 
+  const handleSelectSaved = (id: string) => {
+    const item = savedRequests.find((saved) => saved.id === id);
+    if (item) {
+      onSelectSaved(item);
+    }
+  };
+
   return (
     <div className="api-request-workbench">
+      <div className="api-request-header">
+        <span className="api-request-header-title">Request</span>
+      </div>
+      <div className="api-base-url-row">
+        <label className="api-base-url-label" htmlFor="api-base-url-input">
+          Base URL
+        </label>
+        <input
+          id="api-base-url-input"
+          className="input api-base-url-input"
+          type="text"
+          value={baseUrl}
+          onChange={(event) => onChangeBaseUrl(event.target.value)}
+          placeholder="https://api.example.com (prefixed to relative endpoints)"
+          aria-label="Base URL"
+          spellCheck={false}
+        />
+      </div>
       <RequestBar
         method={draft.method}
         url={currentUrl}
         isSending={isSending}
         methodDisabled={!editable.method}
         urlDisabled={!editable.path}
+        savedRequests={savedRequests}
+        activeSavedRequestId={activeSavedRequestId}
+        onSelectSaved={handleSelectSaved}
         onChangeMethod={(method) => {
           onChange({ ...draft, method });
         }}
@@ -139,6 +185,12 @@ export function RequestWorkbench({
         onSave={onSave}
         onClear={onClear}
       />
+      {baseUrlApplied && (
+        <div className="body-small api-resolved-url">
+          <span className="api-resolved-url-label">Sends to</span>
+          <code className="api-resolved-url-value">{resolvedUrl}</code>
+        </div>
+      )}
       {(!editable.method || !editable.path) && (
         <div className="body-small tw-text-warning api-request-lock-note">Some request fields are locked by the selected task.</div>
       )}

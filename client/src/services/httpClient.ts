@@ -1,4 +1,5 @@
 import { RequestDraft, RequestExecutionResult, RequestKVRow } from '../types/http';
+import { ensureScheme, joinBaseUrl } from '../lib/urlDraft';
 
 function enabledRows(rows: RequestKVRow[]): RequestKVRow[] {
   return rows.filter((row) => row.enabled && row.key.trim().length > 0);
@@ -17,11 +18,11 @@ function buildSplitUrl(baseUrl: string, path: string, query: RequestKVRow[]): st
   return composed.toString();
 }
 
-function resolveRequestUrl(draft: RequestDraft): string {
+function resolveRequestUrl(draft: RequestDraft, baseUrl = ''): string {
   if (draft.urlMode === 'full') {
-    return draft.fullUrl.trim();
+    return ensureScheme(joinBaseUrl(baseUrl, draft.fullUrl).trim());
   }
-  return buildSplitUrl(draft.baseUrl, draft.path, draft.query);
+  return ensureScheme(buildSplitUrl(draft.baseUrl, draft.path, draft.query));
 }
 
 function buildHeaders(draft: RequestDraft): Record<string, string> {
@@ -93,13 +94,14 @@ function shouldProxyThroughServer(requestUrl: string): boolean {
 
 export interface ExecuteRequestOptions {
   signal?: AbortSignal;
+  baseUrl?: string;
 }
 
 export async function executeRequest(
   draft: RequestDraft,
   options?: ExecuteRequestOptions
 ): Promise<RequestExecutionResult> {
-  const requestUrl = applyAuthQueryParams(resolveRequestUrl(draft), draft).trim();
+  const requestUrl = applyAuthQueryParams(resolveRequestUrl(draft, options?.baseUrl ?? ''), draft).trim();
   const headers = buildHeaders(draft);
   const body = resolveBody(draft);
 
@@ -156,10 +158,10 @@ export async function executeRequest(
   };
 }
 
-export function buildCurl(draft: RequestDraft): string {
+export function buildCurl(draft: RequestDraft, baseUrl = ''): string {
   const parts: string[] = ['curl'];
   parts.push('-X', draft.method);
-  const url = applyAuthQueryParams(resolveRequestUrl(draft), draft);
+  const url = applyAuthQueryParams(resolveRequestUrl(draft, baseUrl), draft);
   parts.push(`"${url}"`);
 
   const headers = buildHeaders(draft);

@@ -12,9 +12,41 @@ function normalizedRowsFromSearch(search: string): RequestKVRow[] {
   return rows.length > 0 ? rows : [{ id: generateId(), key: '', value: '', enabled: true }];
 }
 
-export function composeUrlFromDraft(draft: RequestDraft): string {
+export function isAbsoluteUrl(input: string): boolean {
+  return /^[a-z][a-z0-9+.-]*:\/\//i.test(input.trim());
+}
+
+export function ensureScheme(url: string): string {
+  const trimmed = url.trim();
+  if (!trimmed || isAbsoluteUrl(trimmed)) {
+    return trimmed;
+  }
+  if (trimmed.startsWith('//')) {
+    return `http:${trimmed}`;
+  }
+  if (trimmed.startsWith('/')) {
+    return trimmed;
+  }
+  return `http://${trimmed}`;
+}
+
+export function joinBaseUrl(baseUrl: string, input: string): string {
+  const endpoint = input.trim();
+  const base = baseUrl.trim();
+  if (!base || isAbsoluteUrl(endpoint)) {
+    return endpoint;
+  }
+  const trimmedBase = base.replace(/\/+$/, '');
+  if (!endpoint) {
+    return trimmedBase;
+  }
+  const normalizedPath = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+  return `${trimmedBase}${normalizedPath}`;
+}
+
+export function composeUrlFromDraft(draft: RequestDraft, baseUrl = ''): string {
   if (draft.urlMode === 'full') {
-    return draft.fullUrl;
+    return joinBaseUrl(baseUrl, draft.fullUrl);
   }
   const base = draft.baseUrl.endsWith('/') ? draft.baseUrl.slice(0, -1) : draft.baseUrl;
   const path = draft.path.startsWith('/') ? draft.path : `/${draft.path}`;
