@@ -53,7 +53,7 @@ export function buildRequestDraft(baseUrl: string, preset?: ConfigRequestPreset)
   const draft = createDefaultDraft(baseUrl);
   draft.method = preset?.method ?? draft.method;
   draft.path = preset?.path ?? draft.path;
-  draft.fullUrl = `${baseUrl}${draft.path.startsWith('/') ? draft.path : `/${draft.path}`}`;
+  draft.fullUrl = draft.path.startsWith('/') ? draft.path : `/${draft.path}`;
   draft.headers = toRows(preset?.headers);
   draft.query = toRows(preset?.query);
   draft.body = {

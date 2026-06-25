@@ -6,8 +6,19 @@ import { HistoryIcon, TrashIcon } from '../icons';
 import { ResponsePane } from './ResponsePane';
 import { RequestWorkbench } from './workbench/RequestWorkbench';
 
+interface SavedRequest {
+  id: string;
+  name: string;
+  draft: RequestDraft;
+}
+
 interface RequestSectionProps {
   draft: RequestDraft;
+  baseUrl: string;
+  onChangeBaseUrl: (value: string) => void;
+  savedRequests: SavedRequest[];
+  activeSavedRequestId: string | null;
+  onSelectSaved: (item: SavedRequest) => void;
   allowEditing?: ConfigRequestPreset['allowEditing'];
   isSending: boolean;
   response: HttpResponseData | null;
@@ -25,6 +36,11 @@ interface RequestSectionProps {
 
 export function RequestSection({
   draft,
+  baseUrl,
+  onChangeBaseUrl,
+  savedRequests,
+  activeSavedRequestId,
+  onSelectSaved,
   allowEditing,
   isSending,
   response,
@@ -66,6 +82,11 @@ export function RequestSection({
       <div className="api-request-composer">
         <RequestWorkbench
           draft={draft}
+          baseUrl={baseUrl}
+          onChangeBaseUrl={onChangeBaseUrl}
+          savedRequests={savedRequests}
+          activeSavedRequestId={activeSavedRequestId}
+          onSelectSaved={onSelectSaved}
           allowEditing={allowEditing}
           isSending={isSending}
           onChange={onDraftChange}

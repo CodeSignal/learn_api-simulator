@@ -1,7 +1,7 @@
 {
   "taskId": "demo-api-sim",
   "title": "API Client Simulator",
-  "description": "Use manual mode like Postman, or complete guided steps against the built-in demo API.",
+  "description": "Use manual mode like a standard API client, or complete guided steps against the built-in demo API.",
   "baseUrl": "/demo-api",
   "steps": [
     {

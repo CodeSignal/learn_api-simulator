@@ -97,7 +97,7 @@ learn_api-sim/
 │   │   │   │   └── HistoryPanel.tsx
 │   │   │   ├── layout/
 │   │   │   │   └── SimulatorLayout.tsx
-│   │   │   ├── postman/
+│   │   │   ├── simulator/
 │   │   │   │   ├── workbench/
 │   │   │   │   │   ├── AuthEditor.tsx
 │   │   │   │   │   ├── BodyEditor.tsx
@@ -109,7 +109,7 @@ learn_api-sim/
 │   │   │   │   │   └── RequestWorkbench.tsx
 │   │   │   │   ├── ActivitySection.tsx
 │   │   │   │   ├── GuidedStepsSection.tsx
-│   │   │   │   ├── PostmanPage.tsx
+│   │   │   │   ├── SimulatorPage.tsx
 │   │   │   │   ├── RequestSection.tsx
 │   │   │   │   ├── ResponsePane.tsx
 │   │   │   │   ├── SectionNav.tsx

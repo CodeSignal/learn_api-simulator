@@ -2,12 +2,20 @@ import { useEffect, useRef, useState } from 'react';
 import { HttpMethod } from '../../../types/http';
 import { ChevronDownIcon } from '../../icons';
 
+interface SavedRequest {
+  id: string;
+  name: string;
+}
+
 interface RequestBarProps {
   method: HttpMethod;
   url: string;
   isSending: boolean;
   methodDisabled?: boolean;
   urlDisabled?: boolean;
+  savedRequests: SavedRequest[];
+  activeSavedRequestId: string | null;
+  onSelectSaved: (id: string) => void;
   onChangeMethod: (method: HttpMethod) => void;
   onChangeUrl: (url: string) => void;
   onSend: () => void;
@@ -41,6 +49,9 @@ export function RequestBar({
   isSending,
   methodDisabled = false,
   urlDisabled = false,
+  savedRequests,
+  activeSavedRequestId,
+  onSelectSaved,
   onChangeMethod,
   onChangeUrl,
   onSend,
@@ -78,7 +89,7 @@ export function RequestBar({
 
   return (
     <div className="api-request-bar">
-      <div className="api-request-main">
+      <div className="api-request-line">
         <select
           className={`input api-method-select ${methodClass(method)}`}
           value={method}
@@ -102,6 +113,25 @@ export function RequestBar({
           placeholder="http://localhost:<port>/your-endpoint"
           aria-label="Request URL"
         />
+      </div>
+
+      <div className="api-request-actions">
+        <select
+          className="input api-saved-select"
+          value={activeSavedRequestId ?? ''}
+          onChange={(event) => onSelectSaved(event.target.value)}
+          disabled={savedRequests.length === 0}
+          aria-label="Load a saved request"
+        >
+          <option value="">
+            {savedRequests.length === 0 ? 'No saved requests' : 'Saved requests…'}
+          </option>
+          {savedRequests.map((saved) => (
+            <option key={saved.id} value={saved.id}>
+              {saved.name}
+            </option>
+          ))}
+        </select>
 
         <div className="api-send-group" ref={sendMenuRef}>
           <button

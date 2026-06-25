@@ -487,12 +487,148 @@ html, body {
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
-.bespoke .api-request-main {
-  display: grid;
-  grid-template-columns: minmax(120px, 15%) minmax(0, 1fr) minmax(160px, 15%);
-  gap: 12px;
+/* Lightweight in-app modal (used for naming saved requests) */
+.bespoke .api-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(5, 9, 18, 0.6);
+  backdrop-filter: blur(2px);
+}
+
+.bespoke .api-modal {
+  width: 100%;
+  max-width: 380px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 18px;
+  background: var(--bg-2);
+  border: 1px solid var(--border-strong);
+  border-radius: 12px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
+  animation: api-menu-fade-in 0.12s ease-out;
+}
+
+.bespoke .api-modal-title {
+  margin: 0;
+  color: var(--text);
+}
+
+.bespoke .api-modal-label {
+  color: var(--muted);
+}
+
+.bespoke .api-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+/* Request bar rows: method + URL, then saved + send */
+.bespoke .api-request-line {
+  display: flex;
+  gap: 10px;
   align-items: stretch;
   min-width: 0;
+}
+
+.bespoke .api-request-actions {
+  display: flex;
+  gap: 10px;
+  align-items: stretch;
+  min-width: 0;
+  margin-top: 10px;
+}
+
+/* Request section header / indicator */
+.bespoke .api-request-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.bespoke .api-request-header-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.bespoke .api-request-header-title::before {
+  content: '';
+  width: 3px;
+  height: 14px;
+  border-radius: 2px;
+  background: var(--primary);
+}
+
+/* Saved-request dropdown sits in the action row next to Send */
+.bespoke .api-request-actions .api-saved-select {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 44px;
+  min-height: 44px;
+}
+
+/* Base URL row */
+.bespoke .api-base-url-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+  min-width: 0;
+}
+
+.bespoke .api-base-url-label {
+  flex: 0 0 auto;
+  font-weight: 600;
+  font-size: 12px;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--text-2, #9aa4b2);
+}
+
+.bespoke .api-base-url-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 38px;
+  min-height: 38px;
+}
+
+/* Resolved URL preview */
+.bespoke .api-resolved-url {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-top: 8px;
+  min-width: 0;
+}
+
+.bespoke .api-resolved-url-label {
+  flex: 0 0 auto;
+  color: var(--text-2, #9aa4b2);
+}
+
+.bespoke .api-resolved-url-value {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-family: var(--font-mono, monospace);
+  color: var(--text-1, #e6e9ee);
 }
 
 .bespoke .api-method-select,
@@ -509,6 +645,16 @@ html, body {
   letter-spacing: 0.01em;
   border-width: 1px;
   transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.bespoke .api-request-line .api-method-select {
+  flex: 0 0 auto;
+  width: clamp(92px, 26%, 124px);
+}
+
+.bespoke .api-request-line .api-url-input {
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .bespoke .api-sim-app .api-method-select:hover {
@@ -558,6 +704,18 @@ html, body {
   min-width: 0;
   display: grid;
   grid-template-columns: 1fr 42px;
+}
+
+/* Compact send group when it shares the action row with the saved dropdown */
+.bespoke .api-request-actions .api-send-group {
+  flex: 0 0 auto;
+  width: auto;
+  grid-template-columns: auto 40px;
+}
+
+.bespoke .api-request-actions .api-send-button {
+  width: auto;
+  padding: 0 24px;
 }
 
 .bespoke .api-send-group .button {
@@ -805,12 +963,48 @@ html, body {
   border-color: rgba(255, 113, 113, 0.44);
 }
 
-.bespoke .api-response-empty {
-  justify-content: center;
+/* Response section header / indicator */
+.bespoke .api-response-header {
+  display: flex;
   align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex: 0 0 auto;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
 }
 
-.bespoke .api-response-empty .heading-small {
+.bespoke .api-response-header-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.bespoke .api-response-header-title::before {
+  content: '';
+  width: 3px;
+  height: 14px;
+  border-radius: 2px;
+  background: var(--primary);
+}
+
+/* Centered empty/error body below the header */
+.bespoke .api-response-state {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.bespoke .api-response-empty-hint .heading-small {
   color: var(--muted);
 }
 
@@ -1025,6 +1219,87 @@ html, body {
 /* ----------------------------------------------------------------
    Logs section
    ---------------------------------------------------------------- */
+/* Activity tab */
+.bespoke .api-activity-card {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  text-align: left;
+  gap: 0;
+  padding: 0;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+}
+
+.bespoke .api-activity-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex: 0 0 auto;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.bespoke .api-activity-card-header h3 {
+  margin: 0;
+  color: var(--text);
+}
+
+.bespoke .api-activity-count {
+  flex: 0 0 auto;
+  min-width: 22px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--bg-3);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  text-align: center;
+}
+
+.bespoke .api-activity-card-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 8px 16px 16px;
+}
+
+.bespoke .api-activity-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.bespoke .api-activity-item {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.bespoke .api-activity-item:last-child {
+  border-bottom: none;
+}
+
+.bespoke .api-activity-message {
+  color: var(--text);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.bespoke .api-activity-time {
+  flex: 0 0 auto;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
 .bespoke .api-logs-section {
   height: 100%;
 }
@@ -1184,19 +1459,6 @@ html, body {
     min-height: 160px;
   }
 
-  .bespoke .api-request-main {
-    grid-template-columns: minmax(112px, 34%) minmax(0, 1fr);
-    gap: 10px;
-  }
-
-  .bespoke .api-send-group {
-    grid-column: 1 / -1;
-  }
-
-  .bespoke .api-send-button {
-    width: 100%;
-  }
-
   .bespoke .api-kv-head {
     display: none;
   }
@@ -1283,14 +1545,40 @@ html, body {
     border-radius: 8px;
   }
 
-  .bespoke .api-request-main {
-    grid-template-columns: 1fr;
+  /* Compact request header */
+  .bespoke .api-request-header {
+    margin-bottom: 10px;
+    padding-bottom: 8px;
   }
 
-  .bespoke .api-method-select,
-  .bespoke .api-url-input,
-  .bespoke .api-send-group {
-    grid-column: 1 / -1;
+  /* Stack the resolved-URL preview so it never overflows the bar */
+  .bespoke .api-resolved-url {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+  }
+
+  /* Tighter editor tabs so all four fit (and scroll cleanly if not) */
+  .bespoke .api-tab {
+    padding: 8px 9px;
+    font-size: 13px;
+  }
+
+  /* Trim panel paddings for density in a narrow column */
+  .bespoke .api-request-bar {
+    padding: 10px;
+  }
+
+  .bespoke .api-editor-panel {
+    padding: 6px 10px 10px;
+  }
+
+  .bespoke .api-response-pane {
+    padding: 10px 12px 12px;
+  }
+
+  .bespoke .api-base-url-row {
+    gap: 8px;
   }
 
   .bespoke .api-sim-app .api-body-textarea {
@@ -1318,5 +1606,25 @@ html, body {
 
   .bespoke .api-sim-topbar {
     padding: 6px 10px;
+  }
+
+  /* Stack the Base URL label above its input to reclaim horizontal space */
+  .bespoke .api-base-url-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 4px;
+  }
+
+  .bespoke .api-request-header-title,
+  .bespoke .api-response-header-title {
+    font-size: 11px;
+  }
+
+  .bespoke .api-response-summary {
+    padding: 6px 8px;
+  }
+
+  .bespoke .api-response-summary .tag {
+    font-size: 11px;
   }
 }

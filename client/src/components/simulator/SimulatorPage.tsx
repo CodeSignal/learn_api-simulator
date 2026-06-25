@@ -32,9 +32,11 @@ const SECTION_LABELS: Record<AppSection, string> = {
   logs: "Logs",
 };
 
-interface PostmanPageProps {
+interface SimulatorPageProps {
   config: SimulatorConfig;
   draft: RequestDraft;
+  baseUrl: string;
+  onChangeBaseUrl: (value: string) => void;
   isSending: boolean;
   response: HttpResponseData | null;
   requestError: string | null;
@@ -43,6 +45,7 @@ interface PostmanPageProps {
   checkResults: CheckEvaluationResult[];
   history: RequestHistoryEntry[];
   savedRequests: SavedRequest[];
+  activeSavedRequestId: string | null;
   activity: ActivityItem[];
   section: AppSection;
   onSelectSection: (section: AppSection) => void;
@@ -61,9 +64,11 @@ interface PostmanPageProps {
 
 const SECTIONS: AppSection[] = ["request", "activity", "logs"];
 
-export function PostmanPage({
+export function SimulatorPage({
   config,
   draft,
+  baseUrl,
+  onChangeBaseUrl,
   isSending,
   response,
   requestError,
@@ -72,6 +77,7 @@ export function PostmanPage({
   checkResults,
   history,
   savedRequests,
+  activeSavedRequestId,
   activity,
   section,
   onSelectSection,
@@ -86,7 +92,7 @@ export function PostmanPage({
   onRestoreHistory,
   onClearHistory,
   onRestoreSaved,
-}: PostmanPageProps) {
+}: SimulatorPageProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Close mobile menu on Escape
@@ -185,6 +191,11 @@ export function PostmanPage({
           {section === "request" && (
             <RequestSection
               draft={draft}
+              baseUrl={baseUrl}
+              onChangeBaseUrl={onChangeBaseUrl}
+              savedRequests={savedRequests}
+              activeSavedRequestId={activeSavedRequestId}
+              onSelectSaved={onRestoreSaved}
               allowEditing={
                 config.steps.find((step) => step.id === selectedStepId)?.request
                   .allowEditing
@@ -216,13 +227,7 @@ export function PostmanPage({
             />
           )}
 
-          {section === "activity" && (
-            <ActivitySection
-              activity={activity}
-              savedRequests={savedRequests}
-              onRestoreSaved={onRestoreSaved}
-            />
-          )}
+          {section === "activity" && <ActivitySection activity={activity} />}
 
           {section === "logs" && <LogsSection />}
         </section>

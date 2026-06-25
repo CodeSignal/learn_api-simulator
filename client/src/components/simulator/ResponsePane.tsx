@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { ReactNode, useState } from 'react';
 import { HttpResponseData } from '../../types/http';
 import { CopyIcon } from '../icons';
 
@@ -20,24 +20,39 @@ function statusClass(status: number): string {
   return 'tag-warning';
 }
 
+function ResponseHeader({ children }: { children?: ReactNode }) {
+  return (
+    <div className="api-response-header">
+      <span className="api-response-header-title">Response</span>
+      {children}
+    </div>
+  );
+}
+
 export function ResponsePane({ response, error, onCopy }: ResponsePaneProps) {
   const [tab, setTab] = useState<ResponseTab>('pretty');
 
   if (error) {
     return (
-      <div className="api-response-pane api-response-pane-error tw-h-full">
-        <h3 className="heading-small tw-text-danger">Request error</h3>
-        <p className="body-default tw-mt-2 tw-text-danger">{error}</p>
+      <div className="api-response-pane api-response-pane-error tw-h-full tw-flex tw-flex-col">
+        <ResponseHeader />
+        <div className="api-response-state">
+          <h3 className="heading-small tw-text-danger">Request error</h3>
+          <p className="body-default tw-mt-2 tw-text-danger">{error}</p>
+        </div>
       </div>
     );
   }
 
   if (!response) {
     return (
-      <div className="api-response-pane api-response-empty tw-h-full">
-        <div className="api-response-empty-hint">
-          <p className="heading-small">No Response Yet</p>
-          <p>Send a request to see the response here.</p>
+      <div className="api-response-pane tw-h-full tw-flex tw-flex-col">
+        <ResponseHeader />
+        <div className="api-response-state">
+          <div className="api-response-empty-hint">
+            <p className="heading-small">No Response Yet</p>
+            <p>Send a request to see the response here.</p>
+          </div>
         </div>
       </div>
     );
@@ -45,6 +60,13 @@ export function ResponsePane({ response, error, onCopy }: ResponsePaneProps) {
 
   return (
     <div className="api-response-pane tw-min-w-0 tw-h-full tw-flex tw-flex-col">
+      <ResponseHeader>
+        <button type="button" className="button button-text api-copy-response-btn" onClick={onCopy}>
+          <CopyIcon size={14} />
+          <span>Copy</span>
+        </button>
+      </ResponseHeader>
+
       <div className="api-response-summary">
         <div className="tw-flex tw-flex-wrap tw-gap-2 tw-items-center">
           <span className={`tag ${statusClass(response.status)}`}>{response.status}</span>
@@ -52,10 +74,6 @@ export function ResponsePane({ response, error, onCopy }: ResponsePaneProps) {
           <span className="tag tag-neutral">{Math.round(response.durationMs)} ms</span>
           <span className="tag tag-neutral">{response.sizeBytes} bytes</span>
         </div>
-        <button type="button" className="button button-text api-copy-response-btn" onClick={onCopy}>
-          <CopyIcon size={14} />
-          <span>Copy</span>
-        </button>
       </div>
 
       <div className="api-tab-row api-response-tabs" role="tablist" aria-label="Response tabs">

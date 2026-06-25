@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { PostmanPage } from './components/postman/PostmanPage';
-import { AppSection } from './components/postman/SectionNav';
+import { SimulatorPage } from './components/simulator/SimulatorPage';
+import { AppSection } from './components/simulator/SectionNav';
 import { useConfig } from './hooks/useConfig';
 import { useProgress } from './hooks/useProgress';
 import { useRequestHistory } from './hooks/useRequestHistory';
@@ -27,6 +27,8 @@ interface SavedRequest {
   name: string;
   draft: RequestDraft;
 }
+
+const BASE_URL_STORAGE_KEY = 'api-sim-base-url';
 
 function makeId(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -65,11 +67,25 @@ function ClientContainer({
   configError: string | null;
 }) {
   const [selectedStepId, setSelectedStepId] = useState<string | null>(null);
+  const [baseUrl, setBaseUrl] = useState<string>(() => {
+    try {
+      const stored = localStorage.getItem(BASE_URL_STORAGE_KEY);
+      if (stored !== null) {
+        return stored;
+      }
+    } catch (_error) {
+      // ignore unavailable storage
+    }
+    return config.baseUrl ?? '';
+  });
   const [draft, setDraft] = useState<RequestDraft>(() => createDefaultDraft(config.baseUrl ?? ''));
   const [response, setResponse] = useState<HttpResponseData | null>(null);
   const [requestError, setRequestError] = useState<string | null>(null);
   const [checkResults, setCheckResults] = useState<CheckEvaluationResult[]>([]);
   const [isSending, setIsSending] = useState(false);
+  const [activeSavedRequestId, setActiveSavedRequestId] = useState<string | null>(null);
+  const [savePromptOpen, setSavePromptOpen] = useState(false);
+  const [saveName, setSaveName] = useState('');
   const [section, setSection] = useState<AppSection>('request');
   const [toast, setToast] = useState<string | null>(null);
   const [activity, setActivity] = useState<Array<{ id: string; message: string; timestamp: string }>>([]);
@@ -111,6 +127,14 @@ function ClientContainer({
   }, [savedRequests]);
 
   useEffect(() => {
+    try {
+      localStorage.setItem(BASE_URL_STORAGE_KEY, baseUrl);
+    } catch (_error) {
+      // ignore unavailable storage
+    }
+  }, [baseUrl]);
+
+  useEffect(() => {
     const timeout = window.setTimeout(() => setToast(null), 2200);
     return () => window.clearTimeout(timeout);
   }, [toast]);
@@ -119,6 +143,7 @@ function ClientContainer({
     (stepId: string | null) => {
       setSelectedStepId(stepId);
       setRequestError(null);
+      setActiveSavedRequestId(null);
       if (!stepId) {
         return;
       }
@@ -153,7 +178,7 @@ function ClientContainer({
       {
         request: {
           method: masked.method,
-          url: composeUrlFromDraft(masked),
+          url: composeUrlFromDraft(masked, baseUrl),
           headerKeys: masked.headers.filter((row) => row.enabled && row.key.trim()).map((row) => row.key),
           bodyLength: masked.body.text.length,
           authType: masked.auth.type
@@ -165,7 +190,7 @@ function ClientContainer({
     addActivity(`Request sent: ${draft.method}`);
 
     try {
-      const result = await executeRequest(draft);
+      const result = await executeRequest(draft, { baseUrl });
       setResponse(result.response);
 
       await emitEvent(
@@ -241,7 +266,7 @@ function ClientContainer({
     } finally {
       setIsSending(false);
     }
-  }, [addActivity, addEntry, config.taskId, draft, selectedStep, selectedStepId, sessionId, updateProgress]);
+  }, [addActivity, addEntry, baseUrl, config.taskId, draft, selectedStep, selectedStepId, sessionId, updateProgress]);
 
   const handleRunStep = useCallback(() => {
     if (!selectedStepId) {
@@ -261,24 +286,37 @@ function ClientContainer({
     return () => window.removeEventListener('keydown', listener);
   }, [handleSend, isSending]);
 
+  const handleDraftChange = useCallback((next: RequestDraft) => {
+    setActiveSavedRequestId(null);
+    setDraft(next);
+  }, []);
+
   const handleNewRequest = useCallback(() => {
     setDraft(createDefaultDraft(config.baseUrl ?? ''));
     setSelectedStepId(null);
     setResponse(null);
     setRequestError(null);
     setCheckResults([]);
+    setActiveSavedRequestId(null);
   }, [config.baseUrl]);
 
   const handleSaveRequest = useCallback(() => {
-    const name = window.prompt('Request name', `Request ${savedRequests.length + 1}`);
+    setSaveName(`Request ${savedRequests.length + 1}`);
+    setSavePromptOpen(true);
+  }, [savedRequests.length]);
+
+  const handleConfirmSave = useCallback(() => {
+    const name = saveName.trim();
     if (!name) {
       return;
     }
     const item: SavedRequest = { id: makeId(), name, draft: JSON.parse(JSON.stringify(draft)) as RequestDraft };
     setSavedRequests((prev) => [item, ...prev].slice(0, 25));
+    setActiveSavedRequestId(item.id);
     addActivity(`Saved request: ${name}`);
     void emitEvent(config.taskId, sessionId, 'request_saved', { name }, selectedStepId, setToast);
-  }, [addActivity, config.taskId, draft, savedRequests.length, selectedStepId, sessionId]);
+    setSavePromptOpen(false);
+  }, [addActivity, config.taskId, draft, saveName, selectedStepId, sessionId]);
 
   const handleRestoreHistory = useCallback(
     (entry: RequestHistoryEntry) => {
@@ -286,6 +324,7 @@ function ClientContainer({
       setResponse(entry.response ?? null);
       setRequestError(null);
       setSelectedStepId(entry.stepId ?? null);
+      setActiveSavedRequestId(null);
       addActivity(`Restored from history: ${entry.method}`);
       void emitEvent(config.taskId, sessionId, 'history_restored', { historyId: entry.id }, entry.stepId ?? null, setToast);
     },
@@ -295,12 +334,14 @@ function ClientContainer({
   const handleRestoreSaved = useCallback((item: SavedRequest) => {
     setDraft(JSON.parse(JSON.stringify(item.draft)) as RequestDraft);
     setRequestError(null);
+    setSelectedStepId(null);
+    setActiveSavedRequestId(item.id);
   }, []);
 
   const handleCopyCurl = useCallback(async () => {
-    await navigator.clipboard.writeText(buildCurl(draft));
+    await navigator.clipboard.writeText(buildCurl(draft, baseUrl));
     setToast('Copied cURL');
-  }, [draft]);
+  }, [baseUrl, draft]);
 
   const handleCopyResponse = useCallback(async () => {
     if (!response) {
@@ -312,9 +353,11 @@ function ClientContainer({
 
   return (
     <>
-      <PostmanPage
+      <SimulatorPage
         config={config}
         draft={draft}
+        baseUrl={baseUrl}
+        onChangeBaseUrl={setBaseUrl}
         isSending={isSending}
         response={response}
         requestError={requestError}
@@ -323,12 +366,13 @@ function ClientContainer({
         checkResults={checkResults}
         history={history}
         savedRequests={savedRequests}
+        activeSavedRequestId={activeSavedRequestId}
         activity={activity}
         section={section}
         onSelectSection={setSection}
         onSelectStep={handleSelectStep}
         onRunStep={handleRunStep}
-        onDraftChange={setDraft}
+        onDraftChange={handleDraftChange}
         onSend={() => void handleSend()}
         onCopyCurl={() => void handleCopyCurl()}
         onSaveRequest={handleSaveRequest}
@@ -338,6 +382,58 @@ function ClientContainer({
         onClearHistory={clear}
         onRestoreSaved={handleRestoreSaved}
       />
+
+      {savePromptOpen && (
+        <div
+          className="api-modal-overlay"
+          onClick={() => setSavePromptOpen(false)}
+          role="presentation"
+        >
+          <div
+            className="api-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Save request"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <h3 className="heading-xsmall api-modal-title">Save Request</h3>
+            <label className="body-small api-modal-label" htmlFor="api-save-name">
+              Name
+            </label>
+            <input
+              id="api-save-name"
+              className="input"
+              type="text"
+              autoFocus
+              value={saveName}
+              onChange={(event) => setSaveName(event.target.value)}
+              onFocus={(event) => event.target.select()}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') {
+                  event.preventDefault();
+                  handleConfirmSave();
+                } else if (event.key === 'Escape') {
+                  setSavePromptOpen(false);
+                }
+              }}
+              placeholder="e.g. Create user"
+            />
+            <div className="api-modal-actions">
+              <button type="button" className="button button-text" onClick={() => setSavePromptOpen(false)}>
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="button button-primary"
+                onClick={handleConfirmSave}
+                disabled={!saveName.trim()}
+              >
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {configError && (
         <div className="tw-fixed tw-bottom-16 tw-right-4 box card tw-bg-warning tw-p-2 body-small">
