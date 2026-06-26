@@ -144,3 +144,13 @@ When working on applications built with this template:
 
 - Keep BESPOKE-TEMPLATE.md untouched; document new conventions here instead.
 - Continue following CodeSignal Design System guidance for spacing, typography, and accessibility.
+
+## Cursor Cloud specific instructions
+
+- Dependencies are refreshed automatically on startup via the update script (`npm install` + `git submodule update --init --recursive`); you should not need to run these manually.
+- `client/design-system` is a **git submodule** (CodeSignal Design System). If it is empty, the CSS links in `client/index.html` 404 and the UI renders unstyled. The update script initializes it, but if styling looks broken re-run `git submodule update --init --recursive`.
+- Run the dev environment with `npm run start:dev` (see `package.json`): it concurrently starts Vite on **:3000** (the UI) and the API server on **:3001**. Open the app at `http://localhost:3000`; manual/guided requests target the demo API at `http://localhost:3001/demo-api/*`. Both must be running for end-to-end use.
+- Automated check: `node scripts/smoke-test.mjs` exercises the demo CRUD endpoints, but the API server must already be running (e.g. via `npm run start:dev` or `npm run dev:api`) or it will fail to connect.
+- There is **no `lint` or `test` npm script and no ESLint config** in the repo, even though ESLint/Prettier are installed as devDependencies. There is no out-of-the-box lint/unit-test command; don't waste time looking for one. Ad hoc formatting check: `npx prettier --check .`.
+- `vite build` prints benign font-resolution warnings (`/fonts/...woff didn't resolve at build time`) that resolve at runtime; the build still succeeds.
+- Production mode (`npm run start:prod`) forces port 3000 and requires a prior `npm run build` (it throws if `dist/` is missing). For development always prefer `npm run start:dev`.
