@@ -36,7 +36,7 @@ console.log('WebSocket support disabled (ws package not installed)');
 console.log('Install with: npm install ws');
 }
 } else {
-console.log('WebSocket support disabled (set ENABLE_WEBSOCKET=true to enable)');
+// Silent
 }
 const DIST_DIR = path.join(__dirname, 'dist');
 const DATA_DIR = path.join(__dirname, '.api-sim-data');
@@ -633,16 +633,10 @@ wsClients.delete(ws);
  * ==========
  */
 server.listen(PORT, () => {
-console.log(`Server running at http://localhost:${PORT}`);
+console.log(`Running at http://localhost:${PORT}`);
 if (isProduction) {
-console.log(`Serving static files from: ${DIST_DIR}`);
   } else {
 console.log(`Development mode - static files served by Vite`);
-  }
-if (isWebSocketAvailable) {
-console.log(`WebSocket server running on /ws`);
-  } else {
-console.log(`WebSocket functionality disabled - install 'ws' package to enable`);
   }
 console.log('Press Ctrl+C to stop the server');
 });
