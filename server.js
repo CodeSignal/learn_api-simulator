@@ -20,9 +20,13 @@ const fs = require('fs');
 const fsp = fs.promises;
 const path = require('path');
 const url = require('url');
-// Try to load WebSocket module, fallback if not available
+// WebSocket support is opt-in. Set ENABLE_WEBSOCKET=true to enable the optional
+// /ws channel and POST /message broadcasting. It is disabled by default because
+// the API Simulator UI communicates over plain HTTP and does not use WebSockets.
+const WEBSOCKET_ENABLED = process.env.ENABLE_WEBSOCKET === 'true';
 let WebSocket = null;
 let isWebSocketAvailable = false;
+if (WEBSOCKET_ENABLED) {
 try {
 WebSocket = require('ws');
 isWebSocketAvailable = true;
@@ -30,6 +34,9 @@ console.log('WebSocket support enabled');
 } catch (error) {
 console.log('WebSocket support disabled (ws package not installed)');
 console.log('Install with: npm install ws');
+}
+} else {
+console.log('WebSocket support disabled (set ENABLE_WEBSOCKET=true to enable)');
 }
 const DIST_DIR = path.join(__dirname, 'dist');
 const DATA_DIR = path.join(__dirname, '.api-sim-data');

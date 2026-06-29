@@ -1,6 +1,11 @@
 // app.js
 import Modal from './design-system/components/modal/modal.js';
 
+// WebSocket messaging is disabled by default. The API Simulator UI uses plain
+// HTTP, so the optional alert/messaging channel is opt-in. Set this to true and
+// run the server with ENABLE_WEBSOCKET=true to re-enable it.
+const ENABLE_WEBSOCKET = false;
+
 let websocket = null;
 let helpModal = null;
 let helpModalInitialized = false;
@@ -114,7 +119,9 @@ async function initializeHelpModal() {
 // Initialize both help modal and WebSocket when DOM is ready
 async function initialize() {
   await initializeHelpModal();
-  initializeWebSocket();
+  if (ENABLE_WEBSOCKET) {
+    initializeWebSocket();
+  }
 }
 
 if (document.readyState === 'loading') {
